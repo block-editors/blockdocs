@@ -1,5 +1,5 @@
 import { createReduxStore, register, combineReducers } from '@wordpress/data';
-import { serialize } from '@wordpress/blocks';
+import { serialize, parse } from '@wordpress/blocks';
 import { store as noticesStore } from '@wordpress/notices';
 
 const EMPTY_ARRAY = [];
@@ -127,8 +127,17 @@ const newStore = createReduxStore('core', {
 						suggestedName: 'new.html',
 					};
 					fileHandle = await window.showSaveFilePicker(options);
+					await dispatch({
+						type: 'EDIT_ENTITY_RECORD',
+						attributes: {
+							title: fileHandle.name,
+						},
+					});
+					await dispatch({
+						type: 'SET_FILE_HANDLE',
+						fileHandle,
+					});
 				}
-				dispatch.setFile(fileHandle);
 				const writableStream = await fileHandle.createWritable();
 				await writableStream.write(content);
 				await writableStream.close();
@@ -148,7 +157,11 @@ const newStore = createReduxStore('core', {
 				const text = await file.text();
 				await dispatch({
 					type: 'EDIT_ENTITY_RECORD',
-					attributes: { content: text, title: fileHandle.name },
+					attributes: {
+						blocks: parse(text),
+						content: text,
+						title: fileHandle.name,
+					},
 				});
 				await dispatch({
 					type: 'SET_FILE_HANDLE',
