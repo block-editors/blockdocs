@@ -1,9 +1,10 @@
 import React, { useEffect } from 'react';
 import { privateApis } from '@wordpress/editor';
 import { unlock } from './lock-unlock';
-import { useDispatch } from '@wordpress/data';
+import { useDispatch, useSelect } from '@wordpress/data';
 import { store as noticesStore } from '@wordpress/notices';
 import { setDefaultBlockName } from '@wordpress/blocks';
+import { store as blockEditorStore } from '@wordpress/block-editor';
 // import { CommandMenu } from '@wordpress/commands';
 
 const { Editor, FullscreenMode } = unlock(privateApis);
@@ -40,6 +41,33 @@ const contentStyles = [
 
 setDefaultBlockName('core/paragraph');
 
+class BlobString extends String {
+	constructor(blob) {
+		super(URL.createObjectURL(blob));
+	}
+	indexOf(searchString) {
+		// Bypass the blob: check
+		if (searchString === 'blob:') {
+			return -1;
+		}
+		return super.indexOf(searchString);
+	}
+}
+
+async function mediaUpload({ allowedTypes, filesList, onError, onFileChange }) {
+	const urls = await Promise.all(
+		Array.from(filesList).map(async (file) => {
+			return new BlobString(file);
+		})
+	);
+	onFileChange(
+		urls.map((url) => ({
+			id: url.split('/').pop(),
+			url,
+		}))
+	);
+}
+
 function DocEditor() {
 	const { setFile } = useDispatch('core');
 	const { createSuccessNotice } = useDispatch(noticesStore);
@@ -50,7 +78,7 @@ function DocEditor() {
 					types: [
 						{
 							description: 'HTML files',
-							accept: { 'text/html': ['.html'] },
+							accept: { 'application/zip': ['.blockdoc'] },
 						},
 					],
 				});
@@ -73,9 +101,24 @@ function DocEditor() {
 							.join(''),
 					},
 				} }
-			/>
+			>
+				<MediaUpload />
+			</Editor>
 		</>
 	);
+}
+
+function MediaUpload() {
+	const settings = useSelect(
+		(select) => select(blockEditorStore).getSettings().mediaUpload
+	);
+	const { updateSettings } = useDispatch(blockEditorStore);
+	useEffect(() => {
+		if (settings !== mediaUpload) {
+			updateSettings({ mediaUpload });
+		}
+	}, [settings]);
+	return null;
 }
 
 export default ({ canUseNativeFilesystem }) =>

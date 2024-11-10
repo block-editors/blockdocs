@@ -16,6 +16,7 @@ import '@wordpress/block-library/build-module/spacer/init';
 import '@wordpress/block-library/build-module/button/init';
 import '@wordpress/block-library/build-module/buttons/init';
 import '@wordpress/block-library/build-module/missing/init';
+import '@wordpress/block-library/build-module/image/init';
 
 import '@wordpress/block-library/build-style/paragraph/style.css';
 import '@wordpress/block-library/build-style/heading/style.css';
@@ -32,3 +33,4 @@ import '@wordpress/block-library/build-style/separator/style.css';
 import '@wordpress/block-library/build-style/spacer/style.css';
 import '@wordpress/block-library/build-style/button/style.css';
 import '@wordpress/block-library/build-style/buttons/style.css';
+import '@wordpress/block-library/build-style/image/style.css';

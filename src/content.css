@@ -26,3 +26,14 @@ body {
 a {
 	color: var(--wp-components-color-accent);
 }
+.wp-block-image.is-transient img {
+	opacity: 1;
+}
+
+.wp-block-image .components-spinner {
+	display: none;
+}
+
+.wp-block-image .components-resizable-box__container img {
+	width: 100%;
+}
