@@ -1,6 +1,6 @@
 {
-  "appId": "com.ellavandurpe.blocknotes",
-  "appName": "Blocknotes",
+  "appId": "com.ellavandurpe.blockdocs",
+  "appName": "Blockdocs",
   "bundledWebRuntime": false,
   "webDir": "dist",
   "plugins": {

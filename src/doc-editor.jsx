@@ -78,4 +78,9 @@ function DocEditor() {
 	);
 }
 
-export default () => <DocEditor />;
+export default ({ canUseNativeFilesystem }) =>
+	canUseNativeFilesystem ? (
+		<DocEditor />
+	) : (
+		<p>Native filesystem not supported. Please try Chrome.</p>
+	);

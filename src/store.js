@@ -5,7 +5,7 @@ import { store as noticesStore } from '@wordpress/notices';
 const EMPTY_ARRAY = [];
 const postObject = {
 	id: 1,
-	title: 'new.html',
+	title: 'Unsaved Document',
 	content: '',
 	status: 'draft',
 	_links: {
@@ -124,7 +124,7 @@ const newStore = createReduxStore('core', {
 								},
 							},
 						],
-						suggestedName: post.title,
+						suggestedName: 'new.html',
 					};
 					fileHandle = await window.showSaveFilePicker(options);
 				}
