@@ -2,30 +2,30 @@ import { Filesystem } from '@capacitor/filesystem';
 import { Preferences } from '@capacitor/preferences';
 import { get } from 'idb-keyval';
 import { createRoot } from 'react-dom/client';
-import { registerFormatType } from '@wordpress/rich-text';
-import tagFormat from './tag-format';
-import { setDefaultBlockName } from '@wordpress/blocks';
+// import { registerFormatType } from '@wordpress/rich-text';
+// import tagFormat from './tag-format';
+// import { setDefaultBlockName } from '@wordpress/blocks';
 
-import app from './app';
+import app from './doc-editor';
 
-import '@wordpress/format-library';
+// import '@wordpress/format-library';
 
-registerFormatType(tagFormat.name, tagFormat);
+// registerFormatType(tagFormat.name, tagFormat);
 
 // It is needed for the appenders, this should be fixed in GB.
-import '@wordpress/block-editor/build-style/content.css';
+// import '@wordpress/block-editor/build-style/content.css';
 
-import '@wordpress/block-editor/build-style/style.css';
-import '@wordpress/components/build-style/style.css';
+// import '@wordpress/block-editor/build-style/style.css';
+// import '@wordpress/components/build-style/style.css';
 import './light.css';
-import './dark.css';
+// import './dark.css';
 import './app.css';
 
-import './block-types/auto-generated.js';
-import './blocks/list/init';
-import './blocks/list-item/init';
+// import './block-types/auto-generated.js';
+// import './blocks/list/init';
+// import './blocks/list-item/init';
 
-setDefaultBlockName('core/paragraph');
+// setDefaultBlockName('core/paragraph');
 
 export async function getSelectedFolderURL() {
 	let directoryHandle;
