@@ -31,8 +31,12 @@ async function extractImages(blocks) {
 				images.set(image.id, image);
 			}
 			if (name === 'core/image' && attributes.url) {
+				const relPath = attributes.url
+					.split('/')
+					.pop()
+					.replace('#', '.');
 				images.set(
-					attributes.url.split('/').pop(),
+					relPath,
 					await fetch(attributes.url).then((r) => r.blob())
 				);
 				return {
@@ -40,7 +44,7 @@ async function extractImages(blocks) {
 					innerBlocks: newInnerBlocks,
 					attributes: {
 						...attributes,
-						url: attributes.url.split('/').pop(),
+						url: relPath,
 						id: undefined,
 					},
 				};
@@ -209,9 +213,13 @@ const newStore = createReduxStore('core', {
 				const doc = document.implementation.createHTMLDocument();
 				doc.body.innerHTML = text;
 				for (const img of doc.querySelectorAll('img')) {
-					img.src = URL.createObjectURL(
-						await zip.file(img.src).async('blob')
-					);
+					const ext = img.src.split('.').pop();
+					img.src =
+						URL.createObjectURL(
+							await zip.file(img.src).async('blob')
+						) +
+						'#' +
+						ext;
 				}
 				const blocks = parse(doc.body.innerHTML);
 

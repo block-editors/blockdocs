@@ -1,10 +1,12 @@
 import React, { useEffect } from 'react';
-import { privateApis } from '@wordpress/editor';
+import { privateApis, PluginDocumentSettingPanel } from '@wordpress/editor';
 import { unlock } from './lock-unlock';
 import { useDispatch, useSelect } from '@wordpress/data';
 import { store as noticesStore } from '@wordpress/notices';
-import { setDefaultBlockName } from '@wordpress/blocks';
+import { setDefaultBlockName, serialize } from '@wordpress/blocks';
 import { store as blockEditorStore } from '@wordpress/block-editor';
+import { convertToDocx } from './docx';
+import { Button } from '@wordpress/components';
 // import { CommandMenu } from '@wordpress/commands';
 
 const { Editor, FullscreenMode } = unlock(privateApis);
@@ -43,7 +45,12 @@ setDefaultBlockName('core/paragraph');
 
 class BlobString extends String {
 	constructor(blob) {
-		super(URL.createObjectURL(blob));
+		const ext = blob.type.split('/')[1];
+		let url = URL.createObjectURL(blob);
+		if (ext) {
+			url += `#${ext}`;
+		}
+		super(url);
 	}
 	indexOf(searchString) {
 		// Bypass the blob: check
@@ -103,6 +110,7 @@ function DocEditor() {
 				} }
 			>
 				<MediaUpload />
+				<DocX />
 			</Editor>
 		</>
 	);
@@ -119,6 +127,34 @@ function MediaUpload() {
 		}
 	}, [settings]);
 	return null;
+}
+
+function DocX() {
+	const { getBlocks } = useSelect(blockEditorStore);
+	async function onClick() {
+		const docx = await convertToDocx(serialize(getBlocks()));
+		downloadFile(docx, 'test.docx');
+	}
+	return (
+		<PluginDocumentSettingPanel name="blockdocs" title="Word File (.docx)">
+			<Button variant="primary" onClick={onClick}>
+				Download
+			</Button>
+		</PluginDocumentSettingPanel>
+	);
+}
+
+function downloadFile(blob, filename) {
+	const url = URL.createObjectURL(blob);
+	const a = document.createElement('a');
+	a.href = url;
+	a.download = filename || 'my-file.html'; // Suggested file name
+	document.body.appendChild(a);
+	a.click();
+
+	// Clean up by removing the anchor and revoking the object URL
+	document.body.removeChild(a);
+	URL.revokeObjectURL(url);
 }
 
 export default ({ canUseNativeFilesystem }) =>
