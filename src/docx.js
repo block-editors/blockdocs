@@ -155,6 +155,12 @@ export async function convertToDocx(html) {
 			if (type === 'webp') {
 				type = 'jpg';
 			}
+			const setWidth = parseInt(img.style.width);
+			if (setWidth) {
+				dimensions.height =
+					(dimensions.height * setWidth) / dimensions.width;
+				dimensions.width = setWidth;
+			}
 			children.push(
 				new Paragraph({
 					spacing: { before: 200, after: 200 },
