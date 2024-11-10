@@ -1,7 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { privateApis } from '@wordpress/editor';
 import { unlock } from './lock-unlock';
 import { useDispatch } from '@wordpress/data';
+import { store as noticesStore } from '@wordpress/notices';
+import { setDefaultBlockName } from '@wordpress/blocks';
 // import { CommandMenu } from '@wordpress/commands';
 
 const { Editor, FullscreenMode } = unlock(privateApis);
@@ -36,8 +38,11 @@ const contentStyles = [
 	contentStyle,
 ];
 
+setDefaultBlockName('core/paragraph');
+
 function DocEditor() {
 	const { setFile } = useDispatch('core');
+	const { createSuccessNotice } = useDispatch(noticesStore);
 	useEffect(() => {
 		document.addEventListener('click', async (event) => {
 			if (event.target.closest('.editor-document-bar__command')) {
@@ -52,6 +57,9 @@ function DocEditor() {
 				setFile(fileHandle);
 			}
 		});
+		createSuccessNotice(
+			'Welcome! Edit this document and save it to the file system, or pick an existing one by clicking command button above.'
+		);
 	}, []);
 	return (
 		<>

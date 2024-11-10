@@ -5,7 +5,7 @@ import { store as noticesStore } from '@wordpress/notices';
 const EMPTY_ARRAY = [];
 const postObject = {
 	id: 1,
-	title: '',
+	title: 'new.html',
 	content: '',
 	status: 'draft',
 	_links: {
@@ -31,22 +31,6 @@ const newStore = createReduxStore('core', {
 				case 'SET_FILE_HANDLE':
 					return action.fileHandle;
 			}
-			return state;
-		},
-		saving: (state = {}, action) => {
-			switch (action.type) {
-				case 'SAVE_ENTITY_RECORD_START':
-				case 'SAVE_ENTITY_RECORD_FINISH':
-					return {
-						...state,
-						[action.recordId]: {
-							pending: action.type === 'SAVE_ENTITY_RECORD_START',
-							error: action.error,
-							isAutosave: action.isAutosave,
-						},
-					};
-			}
-
 			return state;
 		},
 	}),
@@ -122,19 +106,37 @@ const newStore = createReduxStore('core', {
 		},
 		saveEntityRecord:
 			() =>
-			async ({ select, registry }) => {
+			async ({ select, dispatch, registry }) => {
 				const post = select.getEditedEntityRecord();
 				if (!post.blocks) {
 					return;
 				}
 				const content = serialize(post.blocks);
-				const fileHandle = select.getFileHandle();
+				let fileHandle = select.getFileHandle();
+
+				if (!fileHandle) {
+					const options = {
+						types: [
+							{
+								description: 'HTML Files',
+								accept: {
+									'text/html': ['.html'],
+								},
+							},
+						],
+						suggestedName: post.title,
+					};
+					fileHandle = await window.showSaveFilePicker(options);
+				}
+				dispatch.setFile(fileHandle);
 				const writableStream = await fileHandle.createWritable();
 				await writableStream.write(content);
 				await writableStream.close();
 				registry
 					.dispatch(noticesStore)
-					.createSuccessNotice('Item updated');
+					.createSuccessNotice('Item updated', {
+						id: 'save-notice',
+					});
 			},
 		__unstableCreateUndoLevel: () => {
 			return { type: 'CREATE_UNDO_LEVEL' };

@@ -21,6 +21,7 @@ const names = [
 	'spacer',
 	'button',
 	'buttons',
+	'missing',
 ];
 
 const init = names

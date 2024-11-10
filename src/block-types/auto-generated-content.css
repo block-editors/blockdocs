@@ -30,17 +30,26 @@
  * Fonts & basic variables.
  */
 /**
+ * Typography
+ */
+/**
  * Grid System.
  * https://make.wordpress.org/design/2019/10/31/proposal-a-consistent-spacing-system-for-wordpress/
+ */
+/**
+ * Radius scale.
+ */
+/**
+ * Elevation scale.
  */
 /**
  * Dimensions.
  */
 /**
- * Shadows.
+ * Mobile specific styles
  */
 /**
- * Editor widths.
+ * Editor styles.
  */
 /**
  * Block & Editor UI.
@@ -63,6 +72,9 @@
  *
  * Creates a fading overlay to signify that the content is longer
  * than the space allows.
+ */
+/**
+ * Typography
  */
 /**
  * Breakpoint mixins
@@ -134,17 +146,26 @@
  * Fonts & basic variables.
  */
 /**
+ * Typography
+ */
+/**
  * Grid System.
  * https://make.wordpress.org/design/2019/10/31/proposal-a-consistent-spacing-system-for-wordpress/
+ */
+/**
+ * Radius scale.
+ */
+/**
+ * Elevation scale.
  */
 /**
  * Dimensions.
  */
 /**
- * Shadows.
+ * Mobile specific styles
  */
 /**
- * Editor widths.
+ * Editor styles.
  */
 /**
  * Block & Editor UI.
@@ -167,6 +188,9 @@
  *
  * Creates a fading overlay to signify that the content is longer
  * than the space allows.
+ */
+/**
+ * Typography
  */
 /**
  * Breakpoint mixins
@@ -225,17 +249,26 @@
  * Fonts & basic variables.
  */
 /**
+ * Typography
+ */
+/**
  * Grid System.
  * https://make.wordpress.org/design/2019/10/31/proposal-a-consistent-spacing-system-for-wordpress/
+ */
+/**
+ * Radius scale.
+ */
+/**
+ * Elevation scale.
  */
 /**
  * Dimensions.
  */
 /**
- * Shadows.
+ * Mobile specific styles
  */
 /**
- * Editor widths.
+ * Editor styles.
  */
 /**
  * Block & Editor UI.
@@ -258,6 +291,9 @@
  *
  * Creates a fading overlay to signify that the content is longer
  * than the space allows.
+ */
+/**
+ * Typography
  */
 /**
  * Breakpoint mixins
@@ -289,6 +325,16 @@
   right: 0;
 }
 
+:where([data-has-multi-selection]:not([contenteditable="true"]) .wp-block-group > *) {
+  -webkit-user-select: initial;
+          user-select: initial;
+}
+
+:where([data-has-multi-selection]:not([contenteditable="true"]) .wp-block-group) {
+  -webkit-user-select: none;
+          user-select: none;
+}
+
 [data-type="core/group"].is-selected .block-list-appender {
   margin-left: 0;
   margin-right: 0;
@@ -313,22 +359,10 @@
 .wp-block-group.is-layout-flex.block-editor-block-list__block > .block-list-appender:only-child::after {
   content: "";
   display: flex;
-  flex: 1 0 48px;
+  flex: 1 0 40px;
   pointer-events: none;
-  min-height: 46px;
+  min-height: 38px;
   border: 1px dashed currentColor;
-  border-radius: 2px;
-}
-.wp-block-group.is-layout-flex.block-editor-block-list__block > .block-list-appender:only-child::after::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  pointer-events: none;
-  background: currentColor;
-  opacity: 0.1;
 }
 .wp-block-group.is-layout-flex.block-editor-block-list__block > .block-list-appender:only-child .block-editor-inserter,
 .wp-block-group.is-layout-flex.block-editor-block-list__block > .block-list-appender:only-child .block-editor-button-block-appender {
@@ -366,17 +400,26 @@
  * Fonts & basic variables.
  */
 /**
+ * Typography
+ */
+/**
  * Grid System.
  * https://make.wordpress.org/design/2019/10/31/proposal-a-consistent-spacing-system-for-wordpress/
+ */
+/**
+ * Radius scale.
+ */
+/**
+ * Elevation scale.
  */
 /**
  * Dimensions.
  */
 /**
- * Shadows.
+ * Mobile specific styles
  */
 /**
- * Editor widths.
+ * Editor styles.
  */
 /**
  * Block & Editor UI.
@@ -399,6 +442,9 @@
  *
  * Creates a fading overlay to signify that the content is longer
  * than the space allows.
+ */
+/**
+ * Typography
  */
 /**
  * Breakpoint mixins
@@ -464,17 +510,26 @@ html :where(.wp-block-column) {
  * Fonts & basic variables.
  */
 /**
+ * Typography
+ */
+/**
  * Grid System.
  * https://make.wordpress.org/design/2019/10/31/proposal-a-consistent-spacing-system-for-wordpress/
+ */
+/**
+ * Radius scale.
+ */
+/**
+ * Elevation scale.
  */
 /**
  * Dimensions.
  */
 /**
- * Shadows.
+ * Mobile specific styles
  */
 /**
- * Editor widths.
+ * Editor styles.
  */
 /**
  * Block & Editor UI.
@@ -497,6 +552,9 @@ html :where(.wp-block-column) {
  *
  * Creates a fading overlay to signify that the content is longer
  * than the space allows.
+ */
+/**
+ * Typography
  */
 /**
  * Breakpoint mixins
@@ -606,17 +664,26 @@ html :where(.wp-block-column) {
  * Fonts & basic variables.
  */
 /**
+ * Typography
+ */
+/**
  * Grid System.
  * https://make.wordpress.org/design/2019/10/31/proposal-a-consistent-spacing-system-for-wordpress/
+ */
+/**
+ * Radius scale.
+ */
+/**
+ * Elevation scale.
  */
 /**
  * Dimensions.
  */
 /**
- * Shadows.
+ * Mobile specific styles
  */
 /**
- * Editor widths.
+ * Editor styles.
  */
 /**
  * Block & Editor UI.
@@ -639,6 +706,9 @@ html :where(.wp-block-column) {
  *
  * Creates a fading overlay to signify that the content is longer
  * than the space allows.
+ */
+/**
+ * Typography
  */
 /**
  * Breakpoint mixins
@@ -697,17 +767,26 @@ html :where(.wp-block-column) {
  * Fonts & basic variables.
  */
 /**
+ * Typography
+ */
+/**
  * Grid System.
  * https://make.wordpress.org/design/2019/10/31/proposal-a-consistent-spacing-system-for-wordpress/
+ */
+/**
+ * Radius scale.
+ */
+/**
+ * Elevation scale.
  */
 /**
  * Dimensions.
  */
 /**
- * Shadows.
+ * Mobile specific styles
  */
 /**
- * Editor widths.
+ * Editor styles.
  */
 /**
  * Block & Editor UI.
@@ -730,6 +809,9 @@ html :where(.wp-block-column) {
  *
  * Creates a fading overlay to signify that the content is longer
  * than the space allows.
+ */
+/**
+ * Typography
  */
 /**
  * Breakpoint mixins
@@ -789,17 +871,26 @@ html :where(.wp-block-column) {
  * Fonts & basic variables.
  */
 /**
+ * Typography
+ */
+/**
  * Grid System.
  * https://make.wordpress.org/design/2019/10/31/proposal-a-consistent-spacing-system-for-wordpress/
+ */
+/**
+ * Radius scale.
+ */
+/**
+ * Elevation scale.
  */
 /**
  * Dimensions.
  */
 /**
- * Shadows.
+ * Mobile specific styles
  */
 /**
- * Editor widths.
+ * Editor styles.
  */
 /**
  * Block & Editor UI.
@@ -822,6 +913,9 @@ html :where(.wp-block-column) {
  *
  * Creates a fading overlay to signify that the content is longer
  * than the space allows.
+ */
+/**
+ * Typography
  */
 /**
  * Breakpoint mixins
@@ -913,17 +1007,26 @@ html :where(.wp-block-column) {
  * Fonts & basic variables.
  */
 /**
+ * Typography
+ */
+/**
  * Grid System.
  * https://make.wordpress.org/design/2019/10/31/proposal-a-consistent-spacing-system-for-wordpress/
+ */
+/**
+ * Radius scale.
+ */
+/**
+ * Elevation scale.
  */
 /**
  * Dimensions.
  */
 /**
- * Shadows.
+ * Mobile specific styles
  */
 /**
- * Editor widths.
+ * Editor styles.
  */
 /**
  * Block & Editor UI.
@@ -946,6 +1049,9 @@ html :where(.wp-block-column) {
  *
  * Creates a fading overlay to signify that the content is longer
  * than the space allows.
+ */
+/**
+ * Typography
  */
 /**
  * Breakpoint mixins
@@ -996,10 +1102,6 @@ html :where(.wp-block-column) {
 div[data-type="core/button"] {
   display: table;
 }
-
-.editor-styles-wrapper .wp-block-button[style*=text-decoration] .wp-block-button__link {
-  text-decoration: inherit;
-}
 /**
 *  Converts a hex value into the rgb equivalent.
 *
@@ -1032,17 +1134,26 @@ div[data-type="core/button"] {
  * Fonts & basic variables.
  */
 /**
+ * Typography
+ */
+/**
  * Grid System.
  * https://make.wordpress.org/design/2019/10/31/proposal-a-consistent-spacing-system-for-wordpress/
+ */
+/**
+ * Radius scale.
+ */
+/**
+ * Elevation scale.
  */
 /**
  * Dimensions.
  */
 /**
- * Shadows.
+ * Mobile specific styles
  */
 /**
- * Editor widths.
+ * Editor styles.
  */
 /**
  * Block & Editor UI.
@@ -1067,6 +1178,9 @@ div[data-type="core/button"] {
  * than the space allows.
  */
 /**
+ * Typography
+ */
+/**
  * Breakpoint mixins
  */
 /**
@@ -1089,7 +1203,7 @@ div[data-type="core/button"] {
  * Reset the WP Admin page styles for Gutenberg-like pages.
  */
 .wp-block-buttons {
-  /* stylelint-disable indentation -- Disable the stylelint rule, otherwise this selector is ugly! */
+  /* stylelint-disable @stylistic/indentation -- Disable the stylelint rule, otherwise this selector is ugly! */
 }
 .wp-block-buttons > .wp-block {
   margin: 0;
@@ -1111,7 +1225,7 @@ div[data-type="core/button"] {
 .is-content-justification-right,
 .is-content-justification-left,
 .is-content-justification-center) .wp-block[data-align=center] {
-  /* stylelint-enable indentation */
+  /* stylelint-enable @stylistic/indentation */
   margin-left: auto;
   margin-right: auto;
   margin-top: 0;
@@ -1122,9 +1236,6 @@ div[data-type="core/button"] {
 .is-content-justification-left,
 .is-content-justification-center) .wp-block[data-align=center] .wp-block-button {
   margin-bottom: 0;
-}
-.editor-styles-wrapper .wp-block-buttons.has-custom-font-size .wp-block-button__link {
-  font-size: inherit;
 }
 
 .wp-block[data-align=center] > .wp-block-buttons {

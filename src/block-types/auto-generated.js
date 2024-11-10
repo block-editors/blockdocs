@@ -15,6 +15,7 @@ import '@wordpress/block-library/build-module/separator/init';
 import '@wordpress/block-library/build-module/spacer/init';
 import '@wordpress/block-library/build-module/button/init';
 import '@wordpress/block-library/build-module/buttons/init';
+import '@wordpress/block-library/build-module/missing/init';
 
 import '@wordpress/block-library/build-style/paragraph/style.css';
 import '@wordpress/block-library/build-style/heading/style.css';
