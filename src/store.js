@@ -1,6 +1,7 @@
 import { createReduxStore, register, combineReducers } from '@wordpress/data';
 import { serialize, parse } from '@wordpress/blocks';
 import { store as noticesStore } from '@wordpress/notices';
+import { createUndoManager } from '@wordpress/undo-manager';
 import JSZip from 'jszip';
 
 const EMPTY_ARRAY = [];
@@ -64,6 +65,26 @@ const newStore = createReduxStore('core', {
 			switch (action.type) {
 				case 'EDIT_ENTITY_RECORD':
 					return { ...state, ...action.attributes };
+				case 'UNDO': {
+					const record = action.record.find((r) => r.id === 'object');
+					return {
+						...state,
+						...Object.keys(record.changes).reduce((acc, key) => {
+							acc[key] = record.changes[key].from;
+							return acc;
+						}, {}),
+					};
+				}
+				case 'REDO': {
+					const record = action.record.find((r) => r.id === 'object');
+					return {
+						...state,
+						...Object.keys(record.changes).reduce((acc, key) => {
+							acc[key] = record.changes[key].to;
+							return acc;
+						}, {}),
+					};
+				}
 			}
 			return state;
 		},
@@ -72,6 +93,9 @@ const newStore = createReduxStore('core', {
 				case 'SET_FILE_HANDLE':
 					return action.fileHandle;
 			}
+			return state;
+		},
+		undoManager: (state = createUndoManager()) => {
 			return state;
 		},
 	}),
@@ -105,8 +129,12 @@ const newStore = createReduxStore('core', {
 		getPostType: () => {
 			return postTypeObject;
 		},
-		hasUndo: () => {},
-		hasRedo: () => {},
+		hasUndo: (state) => {
+			return state.undoManager.hasUndo();
+		},
+		hasRedo: (state) => {
+			return state.undoManager.hasRedo();
+		},
 		hasEditsForEntityRecord: () => {},
 		getCurrentUser: () => {},
 		getAutosave: () => {},
@@ -138,14 +166,64 @@ const newStore = createReduxStore('core', {
 		getFileHandle: (state) => {
 			return state.fileHandle;
 		},
+		getUndoManager: (state) => {
+			return state.undoManager;
+		},
 	},
 	actions: {
-		editEntityRecord: (kind, type, id, attributes) => {
-			return {
-				type: 'EDIT_ENTITY_RECORD',
-				attributes,
-			};
-		},
+		undo:
+			() =>
+			async ({ select, dispatch }) => {
+				const undoRecord = select.getUndoManager().undo();
+				if (!undoRecord) {
+					return;
+				}
+				await dispatch({
+					type: 'UNDO',
+					record: undoRecord,
+				});
+			},
+		redo:
+			() =>
+			async ({ select, dispatch }) => {
+				const redoRecord = select.getUndoManager().redo();
+				if (!redoRecord) {
+					return;
+				}
+				await dispatch({
+					type: 'REDO',
+					record: redoRecord,
+				});
+			},
+		editEntityRecord:
+			(kind, type, id, attributes, options = {}) =>
+			async ({ select, dispatch }) => {
+				if (!options.undoIgnore) {
+					const state = select.getEditedEntityRecord();
+					select.getUndoManager().addRecord(
+						[
+							{
+								id: 'object',
+								changes: Object.keys(attributes).reduce(
+									(acc, key) => {
+										acc[key] = {
+											from: state[key],
+											to: attributes[key],
+										};
+										return acc;
+									},
+									{}
+								),
+							},
+						],
+						options.isCached
+					);
+				}
+				await dispatch({
+					type: 'EDIT_ENTITY_RECORD',
+					attributes,
+				});
+			},
 		saveEntityRecord:
 			() =>
 			async ({ select, dispatch, registry }) => {
@@ -200,9 +278,11 @@ const newStore = createReduxStore('core', {
 					window.console.error(e);
 				}
 			},
-		__unstableCreateUndoLevel: () => {
-			return { type: 'CREATE_UNDO_LEVEL' };
-		},
+		__unstableCreateUndoLevel:
+			() =>
+			({ select }) => {
+				select.getUndoManager().addRecord();
+			},
 		setFile:
 			(fileHandle) =>
 			async ({ dispatch }) => {
