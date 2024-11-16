@@ -331,6 +331,9 @@ const newStore = createReduxStore('core', {
 				const doc = document.implementation.createHTMLDocument();
 				doc.body.innerHTML = text;
 				for (const img of doc.querySelectorAll('img')) {
+					if (!img.src) {
+						continue;
+					}
 					const ext = img.src.split('.').pop();
 					img.src =
 						URL.createObjectURL(
