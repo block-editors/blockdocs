@@ -4,13 +4,10 @@ import {
 	Packer,
 	Paragraph,
 	ImageRun,
-	PageSize,
 	Header,
-	Footer,
 	Table,
 	TableRow,
 	TableCell,
-	WidthType,
 	TextRun,
 	ExternalHyperlink,
 } from 'docx';
@@ -147,7 +144,10 @@ export async function convertToDocx(html) {
 					})
 			);
 			children.push(...listItems);
-		} else if (child.tagName === 'FIGURE' && child.querySelector('img')) {
+		} else if (
+			child.tagName === 'FIGURE' &&
+			child.querySelector('img')?.img
+		) {
 			const img = child.querySelector('img');
 			const blob = await fetch(img.src).then((r) => r.blob());
 			const dimensions = await getImageSizeFromUrl(img.src);

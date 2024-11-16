@@ -183,12 +183,8 @@ function MediaUpload() {
 function DocX() {
 	const { getBlocks } = useSelect(blockEditorStore);
 	async function onClick() {
-		try {
-			const docx = await convertToDocx(serialize(getBlocks()));
-			downloadFile(docx, 'test.docx');
-		} catch (e) {
-			console.error(e);
-		}
+		const docx = await convertToDocx(serialize(getBlocks()));
+		downloadFile(docx, 'test.docx');
 	}
 	return (
 		<PluginDocumentSettingPanel name="blockdocs" title="Word File (.docx)">

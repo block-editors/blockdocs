@@ -327,6 +327,12 @@ const newStore = createReduxStore('core', {
 				}
 				const zip = await JSZip.loadAsync(file);
 				const index = zip.file('index.html');
+
+				if (!index) {
+					window.alert('This file was not created with this app.');
+					return;
+				}
+
 				const text = await index.async('string');
 				const doc = document.implementation.createHTMLDocument();
 				doc.body.innerHTML = text;
@@ -355,7 +361,7 @@ const newStore = createReduxStore('core', {
 				dispatch({
 					type: 'CLEAR_UNDO_MANAGER',
 				});
-				if (fileHandle.getFile) {
+				if (fileHandle?.getFile) {
 					await dispatch({
 						type: 'SET_FILE_HANDLE',
 						fileHandle,
