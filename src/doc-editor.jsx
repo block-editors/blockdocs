@@ -11,7 +11,7 @@ import { setDefaultBlockName, serialize } from '@wordpress/blocks';
 import { store as blockEditorStore } from '@wordpress/block-editor';
 import { convertToDocx } from './docx';
 import { Button, TextControl } from '@wordpress/components';
-// import { CommandMenu } from '@wordpress/commands';
+import { CommandMenu } from '@wordpress/commands';
 
 const { Editor, FullscreenMode } = unlock(privateApis);
 
@@ -83,48 +83,45 @@ async function mediaUpload({ allowedTypes, filesList, onError, onFileChange }) {
 }
 
 function DocEditor({ canUseNativeFilesystem }) {
-	const { hasUndo } = useSelect('core');
+	const hasUndo = useSelect((select) => select('core').hasUndo());
 	const { setFile, saveEntityRecord } = useDispatch('core');
 	const { createSuccessNotice, createWarningNotice } =
 		useDispatch(noticesStore);
-	useEffect(() => {
-		document.addEventListener('click', async (event) => {
-			if (event.target.closest('.editor-document-bar__command')) {
-				const _hanUndo = hasUndo();
-				if (_hanUndo) {
-					if (
-						// eslint-disable-next-line no-alert
-						window.confirm(
-							'You have unsaved changes. Do you want to save them?'
-						)
-					) {
-						await saveEntityRecord();
-					}
-				}
-				if (window.showOpenFilePicker) {
-					const [fileHandle] = await window.showOpenFilePicker({
-						types: [
-							{
-								description: 'Pick a file to open.',
-								accept: { [EPUB_MIME_TYPE]: ['.epub'] },
-							},
-						],
-					});
-					setFile(fileHandle);
-				} else {
-					const input = document.createElement('input');
-					input.type = 'file';
-					input.accept = '.epub';
-					input.style.display = 'none';
-					input.addEventListener('change', async (_event) => {
-						setFile(_event.target.files[0]);
-					});
-					document.body.appendChild(input);
-					input.click();
-					document.body.removeChild(input);
-				}
+	async function onOpen() {
+		if (hasUndo) {
+			if (
+				// eslint-disable-next-line no-alert
+				window.confirm(
+					'You have unsaved changes. Do you want to save them?'
+				)
+			) {
+				await saveEntityRecord();
 			}
-		});
+		}
+		if (window.showOpenFilePicker) {
+			const [fileHandle] = await window.showOpenFilePicker({
+				types: [
+					{
+						description: 'Pick a file to open.',
+						accept: { [EPUB_MIME_TYPE]: ['.epub'] },
+					},
+				],
+			});
+			setFile(fileHandle);
+		} else {
+			const input = document.createElement('input');
+			input.type = 'file';
+			input.accept = '.epub';
+			input.style.display = 'none';
+			input.addEventListener('change', async (event) => {
+				setFile(event.target.files[0]);
+			});
+			document.body.appendChild(input);
+			input.click();
+			document.body.removeChild(input);
+		}
+	}
+	useEffect(() => {
 		createSuccessNotice(
 			'Welcome! Edit this document and save it to the file system, or pick an existing one by clicking command button above.'
 		);
@@ -137,7 +134,7 @@ function DocEditor({ canUseNativeFilesystem }) {
 	return (
 		<>
 			<FullscreenMode isActive={true} />
-			{/* <CommandMenu /> */}
+			<CommandMenu />
 			<Editor
 				settings={ {
 					__unstableResolvedAssets: {
@@ -146,6 +143,25 @@ function DocEditor({ canUseNativeFilesystem }) {
 							.join(''),
 					},
 				} }
+				customSaveButton={
+					<>
+						<Button
+							size="compact"
+							variant="secondary"
+							onClick={ onOpen }
+						>
+							Open
+						</Button>
+						<Button
+							size="compact"
+							variant="primary"
+							onClick={() => saveEntityRecord()}
+							disabled={ !hasUndo }
+						>
+							{ canUseNativeFilesystem ? 'Save' : 'Download' }
+						</Button>
+					</>
+				}
 			>
 				<MediaUpload />
 				<DocX />
