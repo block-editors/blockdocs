@@ -46,6 +46,7 @@ const contentStyles = [
 ];
 
 import { EPUB_MIME_TYPE, coverCanvas } from './epub.js';
+import { downloadFile } from './file.js';
 
 setDefaultBlockName('core/paragraph');
 
@@ -81,10 +82,11 @@ async function mediaUpload({ allowedTypes, filesList, onError, onFileChange }) {
 	);
 }
 
-function DocEditor() {
+function DocEditor({ canUseNativeFilesystem }) {
 	const { hasUndo } = useSelect('core');
 	const { setFile, saveEntityRecord } = useDispatch('core');
-	const { createSuccessNotice } = useDispatch(noticesStore);
+	const { createSuccessNotice, createWarningNotice } =
+		useDispatch(noticesStore);
 	useEffect(() => {
 		document.addEventListener('click', async (event) => {
 			if (event.target.closest('.editor-document-bar__command')) {
@@ -99,20 +101,38 @@ function DocEditor() {
 						await saveEntityRecord();
 					}
 				}
-				const [fileHandle] = await window.showOpenFilePicker({
-					types: [
-						{
-							description: 'Pick a file to open.',
-							accept: { [EPUB_MIME_TYPE]: ['.epub'] },
-						},
-					],
-				});
-				setFile(fileHandle);
+				if (window.showOpenFilePicker) {
+					const [fileHandle] = await window.showOpenFilePicker({
+						types: [
+							{
+								description: 'Pick a file to open.',
+								accept: { [EPUB_MIME_TYPE]: ['.epub'] },
+							},
+						],
+					});
+					setFile(fileHandle);
+				} else {
+					const input = document.createElement('input');
+					input.type = 'file';
+					input.accept = '.epub';
+					input.style.display = 'none';
+					input.addEventListener('change', async (_event) => {
+						setFile(_event.target.files[0]);
+					});
+					document.body.appendChild(input);
+					input.click();
+					document.body.removeChild(input);
+				}
 			}
 		});
 		createSuccessNotice(
 			'Welcome! Edit this document and save it to the file system, or pick an existing one by clicking command button above.'
 		);
+		if (!canUseNativeFilesystem) {
+			createWarningNotice(
+				'Limited support in this browser. Files will be downloaded instead of saved. Use Chrome to allow writing to the file system.'
+			);
+		}
 	}, []);
 	return (
 		<>
@@ -202,22 +222,6 @@ function Title() {
 	);
 }
 
-function downloadFile(blob, filename) {
-	const url = URL.createObjectURL(blob);
-	const a = document.createElement('a');
-	a.href = url;
-	a.download = filename || 'my-file.html'; // Suggested file name
-	document.body.appendChild(a);
-	a.click();
-
-	// Clean up by removing the anchor and revoking the object URL
-	document.body.removeChild(a);
-	URL.revokeObjectURL(url);
-}
-
-export default ({ canUseNativeFilesystem }) =>
-	canUseNativeFilesystem ? (
-		<DocEditor />
-	) : (
-		<p>Native filesystem not supported. Please try Chrome.</p>
-	);
+export default ({ canUseNativeFilesystem }) => (
+	<DocEditor canUseNativeFilesystem={ canUseNativeFilesystem } />
+);

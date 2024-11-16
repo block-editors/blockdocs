@@ -5,6 +5,7 @@ import { createUndoManager } from '@wordpress/undo-manager';
 import JSZip from 'jszip';
 
 import { EPUB_MIME_TYPE, createEPub } from './epub';
+import { downloadFile } from './file';
 
 const EMPTY_ARRAY = [];
 const postObject = {
@@ -250,9 +251,33 @@ const newStore = createReduxStore('core', {
 							block.attributes.content.replace(/[\s#]/g, '-');
 					});
 					const content = serialize(blocks);
+					const blob = await createEPub({
+						title: post.title,
+						content,
+						language: 'en',
+						assets: images,
+						nav: chapters.map((chapter) => ({
+							title: chapter.attributes.content,
+							level: chapter.attributes.level,
+							href: `#${chapter.attributes.anchor}`,
+						})),
+					});
+
 					let fileHandle = select.getFileHandle();
 
 					if (!fileHandle) {
+						if (!window.showSaveFilePicker) {
+							downloadFile(blob, `${post.title}.epub`);
+							registry
+								.dispatch(noticesStore)
+								.createSuccessNotice(
+									'Item downloaded. Please use Chrome to write to an existing file.',
+									{
+										id: 'save-notice',
+									}
+								);
+							return;
+						}
 						const options = {
 							types: [
 								{
@@ -276,17 +301,7 @@ const newStore = createReduxStore('core', {
 						});
 					}
 					const writableStream = await fileHandle.createWritable();
-					const blob = await createEPub({
-						title: post.title,
-						content,
-						language: 'en',
-						assets: images,
-						nav: chapters.map((chapter) => ({
-							title: chapter.attributes.content,
-							level: chapter.attributes.level,
-							href: `#${chapter.attributes.anchor}`,
-						})),
-					});
+
 					await writableStream.write(blob);
 					await writableStream.close();
 					registry
@@ -305,8 +320,11 @@ const newStore = createReduxStore('core', {
 			},
 		setFile:
 			(fileHandle) =>
-			async ({ select, dispatch }) => {
-				const file = await fileHandle.getFile();
+			async ({ dispatch }) => {
+				let file = fileHandle;
+				if (fileHandle.getFile) {
+					file = await fileHandle.getFile();
+				}
 				const zip = await JSZip.loadAsync(file);
 				const index = zip.file('index.html');
 				const text = await index.async('string');
@@ -334,10 +352,12 @@ const newStore = createReduxStore('core', {
 				dispatch({
 					type: 'CLEAR_UNDO_MANAGER',
 				});
-				await dispatch({
-					type: 'SET_FILE_HANDLE',
-					fileHandle,
-				});
+				if (fileHandle.getFile) {
+					await dispatch({
+						type: 'SET_FILE_HANDLE',
+						fileHandle,
+					});
+				}
 			},
 	},
 	resolvers: {},
