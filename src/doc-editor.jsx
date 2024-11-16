@@ -1,12 +1,16 @@
-import React, { useEffect } from 'react';
-import { privateApis, PluginDocumentSettingPanel } from '@wordpress/editor';
+import React, { useEffect, useRef } from 'react';
+import {
+	privateApis,
+	PluginDocumentSettingPanel,
+	PluginPostStatusInfo,
+} from '@wordpress/editor';
 import { unlock } from './lock-unlock';
 import { useDispatch, useSelect } from '@wordpress/data';
 import { store as noticesStore } from '@wordpress/notices';
 import { setDefaultBlockName, serialize } from '@wordpress/blocks';
 import { store as blockEditorStore } from '@wordpress/block-editor';
 import { convertToDocx } from './docx';
-import { Button } from '@wordpress/components';
+import { Button, TextControl } from '@wordpress/components';
 // import { CommandMenu } from '@wordpress/commands';
 
 const { Editor, FullscreenMode } = unlock(privateApis);
@@ -40,6 +44,8 @@ const contentStyles = [
 	light,
 	contentStyle,
 ];
+
+import { EPUB_MIME_TYPE, coverCanvas } from './epub.js';
 
 setDefaultBlockName('core/paragraph');
 
@@ -82,12 +88,7 @@ function DocEditor() {
 		document.addEventListener('click', async (event) => {
 			if (event.target.closest('.editor-document-bar__command')) {
 				const [fileHandle] = await window.showOpenFilePicker({
-					types: [
-						{
-							description: 'HTML files',
-							accept: { 'application/zip': ['.blockdoc'] },
-						},
-					],
+					types: [{ accept: { [EPUB_MIME_TYPE]: ['.epub'] } }],
 				});
 				setFile(fileHandle);
 			}
@@ -111,6 +112,7 @@ function DocEditor() {
 			>
 				<MediaUpload />
 				<DocX />
+				<Title />
 			</Editor>
 		</>
 	);
@@ -145,6 +147,41 @@ function DocX() {
 				Download
 			</Button>
 		</PluginDocumentSettingPanel>
+	);
+}
+
+function CoverCanvas({ title }) {
+	const coverCanvasRef = useRef(null);
+	useEffect(() => {
+		coverCanvas({ canvas: coverCanvasRef.current, title });
+	}, [title]);
+	return (
+		<canvas
+			style={ { width: '100%', border: '1px solid #000' } }
+			ref={ coverCanvasRef }
+		/>
+	);
+}
+
+function Title() {
+	const { editEntityRecord } = useDispatch('core');
+	const title = useSelect(
+		(select) => select('core').getEditedEntityRecord().title
+	);
+	return (
+		<>
+			<PluginPostStatusInfo>
+				<TextControl
+					value={title}
+					onChange={(title) =>
+						editEntityRecord(null, null, null, { title })
+					}
+				/>
+			</PluginPostStatusInfo>
+			<PluginPostStatusInfo>
+				<CoverCanvas title={title} />
+			</PluginPostStatusInfo>
+		</>
 	);
 }
 

@@ -3,7 +3,11 @@ html {
 	color: var(--wp-components-color-foreground);
 }
 
-body {
+.edit-post-visual-editor__post-title-wrapper {
+	display: none;
+}
+
+html {
 	background: transparent;
 	max-width: 600px;
 	margin: 50px auto;

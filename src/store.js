@@ -4,10 +4,12 @@ import { store as noticesStore } from '@wordpress/notices';
 import { createUndoManager } from '@wordpress/undo-manager';
 import JSZip from 'jszip';
 
+import { EPUB_MIME_TYPE, createEPub } from './epub';
+
 const EMPTY_ARRAY = [];
 const postObject = {
 	id: 1,
-	title: 'Unsaved Document',
+	title: 'Untitled Document',
 	content: '',
 	status: 'draft',
 	_links: {
@@ -115,8 +117,8 @@ const newStore = createReduxStore('core', {
 		getEditedEntityRecord: (state) => {
 			return state.post;
 		},
-		canUser: () => {
-			return true;
+		canUser: (state, action) => {
+			return ['read', 'update'].includes(action);
 		},
 		getUserPatternCategories: () => {
 			return EMPTY_ARRAY;
@@ -239,14 +241,9 @@ const newStore = createReduxStore('core', {
 					if (!fileHandle) {
 						const options = {
 							types: [
-								{
-									description: 'HTML Files',
-									accept: {
-										'application/zip': ['.blockdoc'],
-									},
-								},
+								{ accept: { [EPUB_MIME_TYPE]: ['.epub'] } },
 							],
-							suggestedName: 'new.blockdoc',
+							suggestedName: `${post.title}.epub`,
 						};
 						fileHandle = await window.showSaveFilePicker(options);
 						await dispatch({
@@ -261,12 +258,12 @@ const newStore = createReduxStore('core', {
 						});
 					}
 					const writableStream = await fileHandle.createWritable();
-					const zip = new JSZip();
-					zip.file('index.html', content);
-					for (const [id, blob] of images.entries()) {
-						zip.file(id, blob);
-					}
-					const blob = await zip.generateAsync({ type: 'blob' });
+					const blob = await createEPub({
+						title: post.title,
+						content,
+						language: 'en',
+						assets: images,
+					});
 					await writableStream.write(blob);
 					await writableStream.close();
 					registry
@@ -308,7 +305,7 @@ const newStore = createReduxStore('core', {
 					attributes: {
 						blocks,
 						content: serialize(blocks),
-						title: fileHandle.name,
+						title: doc.title,
 					},
 				});
 				await dispatch({
