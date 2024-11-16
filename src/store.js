@@ -123,7 +123,7 @@ const newStore = createReduxStore('core', {
 			return state.post;
 		},
 		canUser: (state, action) => {
-			return ['read', 'update'].includes(action);
+			return ['read', 'update', 'create'].includes(action);
 		},
 		getUserPatternCategories: () => {
 			return EMPTY_ARRAY;
