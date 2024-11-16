@@ -97,7 +97,11 @@ const newStore = createReduxStore('core', {
 			}
 			return state;
 		},
-		undoManager: (state = createUndoManager()) => {
+		undoManager: (state = createUndoManager(), action) => {
+			switch (action.type) {
+				case 'CLEAR_UNDO_MANAGER':
+					return createUndoManager();
+			}
 			return state;
 		},
 	}),
@@ -235,13 +239,27 @@ const newStore = createReduxStore('core', {
 						return;
 					}
 					const [blocks, images] = await extractImages(post.blocks);
+					const chapters = blocks.filter(
+						(block) =>
+							block.name === 'core/heading' &&
+							block.attributes.content
+					);
+					// Add chapter IDs to the blocks
+					chapters.forEach((block) => {
+						block.attributes.anchor =
+							block.attributes.content.replace(/[\s#]/g, '-');
+					});
 					const content = serialize(blocks);
 					let fileHandle = select.getFileHandle();
 
 					if (!fileHandle) {
 						const options = {
 							types: [
-								{ accept: { [EPUB_MIME_TYPE]: ['.epub'] } },
+								{
+									description:
+										'A file to store your document.',
+									accept: { [EPUB_MIME_TYPE]: ['.epub'] },
+								},
 							],
 							suggestedName: `${post.title}.epub`,
 						};
@@ -263,6 +281,11 @@ const newStore = createReduxStore('core', {
 						content,
 						language: 'en',
 						assets: images,
+						nav: chapters.map((chapter) => ({
+							title: chapter.attributes.content,
+							level: chapter.attributes.level,
+							href: `#${chapter.attributes.anchor}`,
+						})),
 					});
 					await writableStream.write(blob);
 					await writableStream.close();
@@ -282,7 +305,7 @@ const newStore = createReduxStore('core', {
 			},
 		setFile:
 			(fileHandle) =>
-			async ({ dispatch }) => {
+			async ({ select, dispatch }) => {
 				const file = await fileHandle.getFile();
 				const zip = await JSZip.loadAsync(file);
 				const index = zip.file('index.html');
@@ -307,6 +330,9 @@ const newStore = createReduxStore('core', {
 						content: serialize(blocks),
 						title: doc.title,
 					},
+				});
+				dispatch({
+					type: 'CLEAR_UNDO_MANAGER',
 				});
 				await dispatch({
 					type: 'SET_FILE_HANDLE',

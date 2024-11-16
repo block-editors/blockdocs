@@ -52,12 +52,17 @@ function opfTemplate({ title, uniqueId, modified, language, assets = [] }) {
 `;
 }
 
-function navTemplate({ title, language }) {
+function navTemplate({ language, nav }) {
 	return xmlTemplate({
 		language,
 		title: 'Navigation',
 		content: `<nav epub:type="toc" xmlns:epub="http://www.idpf.org/2007/ops">
-<ol><li><a href="index.html">${title}</a></li></ol>
+<ol>${nav
+			.map(
+				({ title, href }) =>
+					`<li><a href="index.html${href}">${title}</a></li>`
+			)
+			.join('\n')}</ol>
 </nav>`,
 	});
 }
@@ -155,7 +160,14 @@ export function coverCanvas({
 	return canvas;
 }
 
-export async function createEPub({ title, author, content, language, assets }) {
+export async function createEPub({
+	title,
+	author,
+	content,
+	language,
+	assets,
+	nav = [],
+}) {
 	const zip = new JSZip();
 	zip.file('mimetype', EPUB_MIME_TYPE);
 	zip.folder('META-INF').file('container.xml', CONTAINER_XML);
@@ -173,7 +185,14 @@ export async function createEPub({ title, author, content, language, assets }) {
 			coverCanvas({ title, author }).toBlob(resolve, 'image/jpg', 0.9)
 		)
 	);
-	zip.file(NAV_FILE, navTemplate({ title, language }));
+	zip.file(
+		NAV_FILE,
+		navTemplate({
+			title,
+			language,
+			nav: [{ title, href: '' }, ...nav],
+		})
+	);
 	zip.file(
 		OPF_FILE,
 		opfTemplate({

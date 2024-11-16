@@ -82,13 +82,30 @@ async function mediaUpload({ allowedTypes, filesList, onError, onFileChange }) {
 }
 
 function DocEditor() {
-	const { setFile } = useDispatch('core');
+	const { hasUndo } = useSelect('core');
+	const { setFile, saveEntityRecord } = useDispatch('core');
 	const { createSuccessNotice } = useDispatch(noticesStore);
 	useEffect(() => {
 		document.addEventListener('click', async (event) => {
 			if (event.target.closest('.editor-document-bar__command')) {
+				const _hanUndo = hasUndo();
+				if (_hanUndo) {
+					if (
+						// eslint-disable-next-line no-alert
+						window.confirm(
+							'You have unsaved changes. Do you want to save them?'
+						)
+					) {
+						await saveEntityRecord();
+					}
+				}
 				const [fileHandle] = await window.showOpenFilePicker({
-					types: [{ accept: { [EPUB_MIME_TYPE]: ['.epub'] } }],
+					types: [
+						{
+							description: 'Pick a file to open.',
+							accept: { [EPUB_MIME_TYPE]: ['.epub'] },
+						},
+					],
 				});
 				setFile(fileHandle);
 			}
