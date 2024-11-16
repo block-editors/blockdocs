@@ -108,7 +108,7 @@ export function coverCanvas({
 	ctx.fillRect(0, 0, width, height);
 
 	// Font settings
-	const titleFontSize = 180;
+	const titleFontSize = 160;
 	const authorFontSize = 100;
 	const lineHeight = 1.2;
 	const titleFont = `normal ${titleFontSize}px ` + systemFont;

@@ -85,8 +85,7 @@ async function mediaUpload({ allowedTypes, filesList, onError, onFileChange }) {
 function DocEditor({ canUseNativeFilesystem }) {
 	const hasUndo = useSelect((select) => select('core').hasUndo());
 	const { setFile, saveEntityRecord } = useDispatch('core');
-	const { createSuccessNotice, createWarningNotice } =
-		useDispatch(noticesStore);
+	const { createWarningNotice } = useDispatch(noticesStore);
 	async function onOpen() {
 		if (hasUndo) {
 			if (
@@ -122,9 +121,6 @@ function DocEditor({ canUseNativeFilesystem }) {
 		}
 	}
 	useEffect(() => {
-		createSuccessNotice(
-			'Welcome! Edit this document and save it to the file system, or pick an existing one by clicking command button above.'
-		);
 		if (!canUseNativeFilesystem) {
 			createWarningNotice(
 				'Limited support in this browser. Files will be downloaded instead of saved. Use Chrome to allow writing to the file system.'
@@ -147,14 +143,14 @@ function DocEditor({ canUseNativeFilesystem }) {
 					<>
 						<Button
 							size="compact"
-							variant="secondary"
+							variant={ hasUndo ? 'secondary' : 'primary' }
 							onClick={ onOpen }
 						>
 							Open
 						</Button>
 						<Button
 							size="compact"
-							variant="primary"
+							variant={ hasUndo ? 'primary' : 'secondary' }
 							onClick={() => saveEntityRecord()}
 							disabled={ !hasUndo }
 						>
