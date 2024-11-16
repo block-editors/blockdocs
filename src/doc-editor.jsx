@@ -225,6 +225,7 @@ function Title() {
 		<>
 			<PluginPostStatusInfo>
 				<TextControl
+					label="Title"
 					value={title}
 					onChange={(title) =>
 						editEntityRecord(null, null, null, { title })

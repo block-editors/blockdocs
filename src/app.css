@@ -10,3 +10,8 @@ body {
 .is-fullscreen-mode .interface-interface-skeleton {
   top: 0;
 }
+
+/* Hide the post status panel */
+.editor-post-card-panel ~ div > .components-flex {
+  display: none;
+}
