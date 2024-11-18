@@ -3,6 +3,7 @@ import { serialize, parse } from '@wordpress/blocks';
 import { store as noticesStore } from '@wordpress/notices';
 import { createUndoManager } from '@wordpress/undo-manager';
 import JSZip from 'jszip';
+import { v4 as uuidv4 } from 'uuid';
 
 import { EPUB_MIME_TYPE, createEPub } from './epub';
 import { downloadFile } from './file';
@@ -247,12 +248,14 @@ const newStore = createReduxStore('core', {
 					);
 					// Add chapter IDs to the blocks
 					chapters.forEach((block) => {
-						block.attributes.anchor =
-							block.attributes.content.replace(/[\s#]/g, '-');
+						block.attributes.anchor = block.attributes.content
+							.toLowerCase()
+							.replace(/[^a-z0-9]+/g, '-');
 					});
 					const content = serialize(blocks);
 					const blob = await createEPub({
 						title: post.title,
+						uniqueId: uuidv4(),
 						content,
 						language: 'en',
 						assets: images,

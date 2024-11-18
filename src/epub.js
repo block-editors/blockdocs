@@ -43,7 +43,7 @@ function opfTemplate({ title, uniqueId, modified, language, assets = [] }) {
 	    <item id="cover" href="cover.jpg" media-type="image/jpg" />
 	    <item id="nav" href="${NAV_FILE}" media-type="application/xhtml+xml" properties="nav" />
 	    <item id="content" href="index.html" media-type="application/xhtml+xml" />
-		${assets.map((asset) => `<item id="${asset}" href="${asset}" media-type="image/${asset.split('.').pop()}" />`).join('\n')}
+		${assets.map((asset) => `<item id="a${asset}" href="${asset}" media-type="image/${asset.split('.').pop()}" />`).join('\n')}
 	</manifest>
 	<spine>
 	    <itemref idref="content" />
