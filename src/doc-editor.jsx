@@ -52,12 +52,11 @@ setDefaultBlockName('core/paragraph');
 
 class BlobString extends String {
 	constructor(blob) {
-		const ext = blob.type.split('/')[1];
-		let url = URL.createObjectURL(blob);
-		if (ext) {
-			url += `#${ext}`;
-		}
-		super(url);
+		const url = URL.createObjectURL(blob);
+		const name =
+			blob.name ??
+			url.split('/').pop() + '.' + blob.type.split('/').pop();
+		super(`${url}#${name}`);
 	}
 	indexOf(searchString) {
 		// Bypass the blob: check
@@ -68,7 +67,7 @@ class BlobString extends String {
 	}
 }
 
-async function mediaUpload({ allowedTypes, filesList, onError, onFileChange }) {
+async function mediaUpload({ filesList, onFileChange }) {
 	const urls = await Promise.all(
 		Array.from(filesList).map(async (file) => {
 			return new BlobString(file);
@@ -83,7 +82,12 @@ async function mediaUpload({ allowedTypes, filesList, onError, onFileChange }) {
 }
 
 function DocEditor({ canUseNativeFilesystem }) {
-	const hasUndo = useSelect((select) => select('core').hasUndo());
+	const { hasUndo, currentPostId } = useSelect((select) => {
+		return {
+			currentPostId: select('core').getCurrentPostId(),
+			hasUndo: select('core').hasUndo(),
+		};
+	});
 	const { setFile, saveEntityRecord } = useDispatch('core');
 	const { createWarningNotice } = useDispatch(noticesStore);
 	async function onOpen() {
@@ -94,7 +98,7 @@ function DocEditor({ canUseNativeFilesystem }) {
 					'You have unsaved changes. Do you want to save them?'
 				)
 			) {
-				await saveEntityRecord();
+				await saveEntityRecord(null, null, currentPostId);
 			}
 		}
 		if (window.showOpenFilePicker) {
@@ -127,11 +131,15 @@ function DocEditor({ canUseNativeFilesystem }) {
 			);
 		}
 	}, []);
+	if (!currentPostId) {
+		return null;
+	}
 	return (
 		<>
 			<FullscreenMode isActive={true} />
 			<CommandMenu />
 			<Editor
+				postId={ currentPostId }
 				settings={ {
 					__unstableResolvedAssets: {
 						styles: contentStyles
@@ -151,7 +159,9 @@ function DocEditor({ canUseNativeFilesystem }) {
 						<Button
 							size="compact"
 							variant={ hasUndo ? 'primary' : 'secondary' }
-							onClick={() => saveEntityRecord()}
+							onClick={() =>
+								saveEntityRecord(null, null, currentPostId)
+							}
 							disabled={ !hasUndo }
 						>
 							{ canUseNativeFilesystem ? 'Save' : 'Download' }
@@ -161,7 +171,7 @@ function DocEditor({ canUseNativeFilesystem }) {
 			>
 				<MediaUpload />
 				<DocX />
-				<Title />
+				<Title currentPostId={ currentPostId } />
 			</Editor>
 		</>
 	);
@@ -208,10 +218,13 @@ function CoverCanvas({ title }) {
 	);
 }
 
-function Title() {
+function Title({ currentPostId }) {
 	const { editEntityRecord } = useDispatch('core');
 	const title = useSelect(
-		(select) => select('core').getEditedEntityRecord().title
+		(select) =>
+			select('core').getEditedEntityRecord(null, null, currentPostId)
+				.title,
+		[currentPostId]
 	);
 	return (
 		<>
@@ -220,7 +233,7 @@ function Title() {
 					label="Title"
 					value={title}
 					onChange={(title) =>
-						editEntityRecord(null, null, null, { title })
+						editEntityRecord(null, null, currentPostId, { title })
 					}
 				/>
 			</PluginPostStatusInfo>

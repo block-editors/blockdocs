@@ -5,18 +5,19 @@ import { createUndoManager } from '@wordpress/undo-manager';
 import JSZip from 'jszip';
 import { v4 as uuidv4 } from 'uuid';
 
-import { EPUB_MIME_TYPE, createEPub } from './epub';
+import { EPUB_MIME_TYPE, OPF_FILE, createEPub } from './epub';
 import { downloadFile } from './file';
 
 const EMPTY_ARRAY = [];
+const defaultAttributes = {
+	status: 'draft',
+	_links: { 'wp:action-publish': true },
+};
 const postObject = {
-	id: 1,
+	id: uuidv4(),
 	title: 'Untitled Document',
 	content: '',
-	status: 'draft',
-	_links: {
-		'wp:action-publish': true,
-	},
+	...defaultAttributes,
 };
 const postTypeObject = {
 	labels: {},
@@ -36,10 +37,7 @@ async function extractImages(blocks) {
 				images.set(image.id, image);
 			}
 			if (name === 'core/image' && attributes.url) {
-				const relPath = attributes.url
-					.split('/')
-					.pop()
-					.replace('#', '.');
+				const relPath = attributes.url.split('#').pop();
 				images.set(
 					relPath,
 					await fetch(attributes.url).then((r) => r.blob())
@@ -65,63 +63,83 @@ async function extractImages(blocks) {
 
 const newStore = createReduxStore('core', {
 	reducer: combineReducers({
-		post: (state = postObject, action) => {
+		currentPostId: (state = postObject.id, action) => {
+			return action.type === 'SET_CURRENT_POST_ID'
+				? action.postId
+				: state;
+		},
+		posts: (state = { [postObject.id]: postObject }, action) => {
 			switch (action.type) {
 				case 'EDIT_ENTITY_RECORD':
-					return { ...state, ...action.attributes };
-				case 'UNDO': {
-					const record = action.record.find((r) => r.id === 'object');
 					return {
 						...state,
-						...Object.keys(record.changes).reduce((acc, key) => {
-							acc[key] = record.changes[key].from;
-							return acc;
+						[action.recordId]: {
+							id: action.recordId,
+							...defaultAttributes,
+							...state[action.recordId],
+							...action.attributes,
+						},
+					};
+				case 'UNDO': {
+					return {
+						...state,
+						...action.record.reduce((posts, { id, changes }) => {
+							posts[id] = {
+								...state[id],
+								...Object.keys(changes).reduce((acc, key) => {
+									acc[key] = changes[key].from;
+									return acc;
+								}, {}),
+							};
+							return posts;
 						}, {}),
 					};
 				}
 				case 'REDO': {
-					const record = action.record.find((r) => r.id === 'object');
 					return {
 						...state,
-						...Object.keys(record.changes).reduce((acc, key) => {
-							acc[key] = record.changes[key].to;
-							return acc;
+						...action.record.reduce((posts, { id, changes }) => {
+							posts[id] = {
+								...state[id],
+								...Object.keys(changes).reduce((acc, key) => {
+									acc[key] = changes[key].to;
+									return acc;
+								}, {}),
+							};
+							return posts;
 						}, {}),
 					};
 				}
 			}
 			return state;
 		},
-		fileHandle: (state = null, action) => {
-			switch (action.type) {
-				case 'SET_FILE_HANDLE':
-					return action.fileHandle;
-			}
-			return state;
+		fileHandle: (state = {}, { type, fileHandle, id }) => {
+			return type === 'SET_FILE_HANDLE'
+				? { ...state, [id]: fileHandle }
+				: state;
 		},
-		undoManager: (state = createUndoManager(), action) => {
-			switch (action.type) {
-				case 'CLEAR_UNDO_MANAGER':
-					return createUndoManager();
-			}
-			return state;
+		undoManager: (state = createUndoManager(), { type }) => {
+			return type === 'CLEAR_UNDO_MANAGER' ? createUndoManager() : state;
 		},
 	}),
 	selectors: {
-		getEntityRecord: (state) => {
-			return state.post;
+		getCurrentPostId: (state) => {
+			return state.currentPostId;
+		},
+		getEntityRecord: (state, kind, type, id) => {
+			return state.posts[id];
 		},
 		getEntityRecords: () => {
 			return EMPTY_ARRAY;
 		},
-		getEntityRecordEdits: (state) => {
-			return state.post;
+		getEntityRecordEdits: (state, kind, type, id) => {
+			return state.posts[id];
 		},
-		getRawEntityRecord: (state) => {
-			return state.post;
+		getRawEntityRecord: (state, kind, type, id) => {
+			return state.posts[id];
 		},
-		getEditedEntityRecord: (state) => {
-			return state.post;
+		getEditedEntityRecord: (state, kind, type, id) => {
+			return state.posts[id];
 		},
 		canUser: (state, action) => {
 			return ['read', 'update', 'create'].includes(action);
@@ -164,15 +182,15 @@ const newStore = createReduxStore('core', {
 		getBlockPatternsForPostType: () => {
 			return EMPTY_ARRAY;
 		},
-		getEntityRecordNonTransientEdits: (state) => {
-			return state.post;
+		getEntityRecordNonTransientEdits: (state, kind, type, id) => {
+			return state.posts[id];
 		},
 		getLastEntitySaveError: () => {
 			return null;
 		},
 		getMedia: () => {},
-		getFileHandle: (state) => {
-			return state.fileHandle;
+		getFileHandle: (state, id) => {
+			return state.fileHandle[id];
 		},
 		getUndoManager: (state) => {
 			return state.undoManager;
@@ -186,10 +204,7 @@ const newStore = createReduxStore('core', {
 				if (!undoRecord) {
 					return;
 				}
-				await dispatch({
-					type: 'UNDO',
-					record: undoRecord,
-				});
+				await dispatch({ type: 'UNDO', record: undoRecord });
 			},
 		redo:
 			() =>
@@ -198,20 +213,17 @@ const newStore = createReduxStore('core', {
 				if (!redoRecord) {
 					return;
 				}
-				await dispatch({
-					type: 'REDO',
-					record: redoRecord,
-				});
+				await dispatch({ type: 'REDO', record: redoRecord });
 			},
 		editEntityRecord:
 			(kind, type, id, attributes, options = {}) =>
 			async ({ select, dispatch }) => {
 				if (!options.undoIgnore) {
-					const state = select.getEditedEntityRecord();
+					const state = select.getEditedEntityRecord(kind, type, id);
 					select.getUndoManager().addRecord(
 						[
 							{
-								id: 'object',
+								id,
 								changes: Object.keys(attributes).reduce(
 									(acc, key) => {
 										acc[key] = {
@@ -226,17 +238,24 @@ const newStore = createReduxStore('core', {
 						],
 						options.isCached
 					);
+					// if (attributes.blocks) {
+					// 	const [blocks] = await extractImages(attributes.blocks);
+					// 	const local = serialize(blocks);
+					// 	window.localStorage.setItem(id, local);
+					// 	window.localStorage.setItem(id + '-time', Date.now());
+					// }
 				}
 				await dispatch({
 					type: 'EDIT_ENTITY_RECORD',
 					attributes,
+					recordId: id,
 				});
 			},
 		saveEntityRecord:
-			() =>
+			(kind, type, id) =>
 			async ({ select, dispatch, registry }) => {
 				try {
-					const post = select.getEditedEntityRecord();
+					const post = select.getEditedEntityRecord(kind, type, id);
 					if (!post.blocks) {
 						return;
 					}
@@ -255,7 +274,7 @@ const newStore = createReduxStore('core', {
 					const content = serialize(blocks);
 					const blob = await createEPub({
 						title: post.title,
-						uniqueId: uuidv4(),
+						uniqueId: id,
 						content,
 						language: 'en',
 						assets: images,
@@ -266,7 +285,7 @@ const newStore = createReduxStore('core', {
 						})),
 					});
 
-					let fileHandle = select.getFileHandle();
+					let fileHandle = select.getFileHandle(id);
 
 					if (!fileHandle) {
 						if (!window.showSaveFilePicker) {
@@ -275,9 +294,7 @@ const newStore = createReduxStore('core', {
 								.dispatch(noticesStore)
 								.createSuccessNotice(
 									'Item downloaded. Please use Chrome to write to an existing file.',
-									{
-										id: 'save-notice',
-									}
+									{ id: 'save-notice' }
 								);
 							return;
 						}
@@ -294,13 +311,13 @@ const newStore = createReduxStore('core', {
 						fileHandle = await window.showSaveFilePicker(options);
 						await dispatch({
 							type: 'EDIT_ENTITY_RECORD',
-							attributes: {
-								title: fileHandle.name,
-							},
+							recordId: id,
+							attributes: { title: fileHandle.name },
 						});
 						await dispatch({
 							type: 'SET_FILE_HANDLE',
 							fileHandle,
+							id,
 						});
 					}
 					const writableStream = await fileHandle.createWritable();
@@ -323,52 +340,98 @@ const newStore = createReduxStore('core', {
 			},
 		setFile:
 			(fileHandle) =>
-			async ({ dispatch }) => {
+			async ({ dispatch, registry }) => {
 				let file = fileHandle;
 				if (fileHandle.getFile) {
 					file = await fileHandle.getFile();
 				}
+				const { lastModified } = file;
 				const zip = await JSZip.loadAsync(file);
 				const index = zip.file('index.html');
 
 				if (!index) {
+					// eslint-disable-next-line no-alert
 					window.alert('This file was not created with this app.');
 					return;
 				}
 
-				const text = await index.async('string');
-				const doc = document.implementation.createHTMLDocument();
-				doc.body.innerHTML = text;
-				for (const img of doc.querySelectorAll('img')) {
-					if (!img.src) {
-						continue;
-					}
-					const ext = img.src.split('.').pop();
-					img.src =
-						URL.createObjectURL(
-							await zip.file(img.src).async('blob')
-						) +
-						'#' +
-						ext;
+				const opf = zip.file(OPF_FILE);
+
+				if (!opf) {
+					// eslint-disable-next-line no-alert
+					window.alert('No meta data found.');
+					return;
 				}
-				const blocks = parse(doc.body.innerHTML);
+
+				const parser = new window.DOMParser();
+				const xmlDoc = parser.parseFromString(
+					await opf.async('string'),
+					'text/xml'
+				);
+
+				const packageEl = xmlDoc.querySelector('package');
+
+				const idAttrName = packageEl.getAttribute('unique-identifier');
+				let id = xmlDoc.getElementById(idAttrName).textContent;
+				if (id === 'unique-id') {
+					id = uuidv4();
+				}
+				const titleElement = Array.from(
+					xmlDoc.querySelector('metadata').children
+				).find((el) => el.prefix === 'dc' && el.localName === 'title');
+				const title = titleElement.textContent;
+
+				const text = await index.async('string');
+
+				async function addImages(string) {
+					const doc = parser.parseFromString(string, 'text/html');
+					for (const img of doc.querySelectorAll('img')) {
+						const src = img.getAttribute('src');
+						if (!src) {
+							continue;
+						}
+						img.src =
+							URL.createObjectURL(
+								await zip.file(src).async('blob')
+							) +
+							'#' +
+							src;
+					}
+					return parse(doc.body.innerHTML);
+				}
+
+				const blocks = await addImages(text);
 
 				await dispatch({
 					type: 'EDIT_ENTITY_RECORD',
+					recordId: id,
 					attributes: {
 						blocks,
 						content: serialize(blocks),
-						title: doc.title,
+						title,
 					},
 				});
-				dispatch({
-					type: 'CLEAR_UNDO_MANAGER',
-				});
+				dispatch({ type: 'CLEAR_UNDO_MANAGER' });
+				dispatch({ type: 'SET_CURRENT_POST_ID', postId: id });
 				if (fileHandle?.getFile) {
-					await dispatch({
-						type: 'SET_FILE_HANDLE',
-						fileHandle,
+					await dispatch({ type: 'SET_FILE_HANDLE', fileHandle, id });
+				}
+
+				// Check if local storage has the same content
+				const local = window.localStorage.getItem(id);
+				const localTime = window.localStorage.getItem(id + '-time');
+				if (local && localTime && lastModified < localTime) {
+					const _blocks = await addImages(`<body>${local}</body>`);
+					await dispatch.editEntityRecord(null, null, id, {
+						blocks: _blocks,
+						content: serialize(_blocks),
 					});
+					registry
+						.dispatch(noticesStore)
+						.createWarningNotice(
+							'Recovered unsaved changes. Press Undo to revert.',
+							{ id: 'local-save' }
+						);
 				}
 			},
 	},

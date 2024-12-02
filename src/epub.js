@@ -2,8 +2,8 @@ import JSZip from 'jszip';
 
 export const EPUB_MIME_TYPE = 'application/epub+zip';
 
-const OPF_FILE = '_package.xml';
-const NAV_FILE = '_nav.html';
+export const OPF_FILE = '_package.xml';
+export const NAV_FILE = '_nav.html';
 
 const CONTAINER_XML = `<?xml version="1.0"?>
 <container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container">
@@ -13,7 +13,11 @@ const CONTAINER_XML = `<?xml version="1.0"?>
 </container>
 `;
 
-const xmlTemplate = ({ title, content, language }) => `<!DOCTYPE html>
+const xmlTemplate = ({
+	title,
+	content,
+	language,
+}) => `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="${language}">
 <head>
 <!-- For XHTML compatibility. -->
@@ -161,6 +165,7 @@ export function coverCanvas({
 }
 
 export async function createEPub({
+	uniqueId,
 	title,
 	author,
 	content,
@@ -171,14 +176,7 @@ export async function createEPub({
 	const zip = new JSZip();
 	zip.file('mimetype', EPUB_MIME_TYPE);
 	zip.folder('META-INF').file('container.xml', CONTAINER_XML);
-	zip.file(
-		'index.html',
-		xmlTemplate({
-			title,
-			content,
-			language,
-		})
-	);
+	zip.file('index.html', xmlTemplate({ title, content, language }));
 	zip.file(
 		'cover.jpg',
 		await new Promise((resolve) =>
@@ -197,7 +195,7 @@ export async function createEPub({
 		OPF_FILE,
 		opfTemplate({
 			title: title ?? 'Untitled',
-			uniqueId: 'unique-id',
+			uniqueId,
 			modified: new Date().toISOString().replace(/\.\d+/, ''),
 			language,
 			assets: Array.from(assets.keys()),
