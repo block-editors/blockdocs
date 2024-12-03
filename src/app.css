@@ -12,7 +12,7 @@ body {
 }
 
 /* Hide the post status panel */
-.editor-post-card-panel ~ div > .components-flex {
+.editor-post-card-panel ~ div > div > .components-flex {
   display: none;
 }
 

@@ -257,6 +257,7 @@ function Title({ currentPostId }) {
 	function setTitle(title) {
 		editEntityRecord(null, null, currentPostId, { title });
 	}
+	console.log('test')
 	return (
 		<>
 			<PluginPostStatusInfo>

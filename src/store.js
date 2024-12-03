@@ -195,6 +195,9 @@ const newStore = createReduxStore('core', {
 		getUndoManager: (state) => {
 			return state.undoManager;
 		},
+		hasFinishedResolution: (state, kind, type, id) => {
+			return true;
+		},
 	},
 	actions: {
 		undo:
