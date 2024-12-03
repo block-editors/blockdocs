@@ -1,4 +1,5 @@
 import JSZip from 'jszip';
+import { parse } from 'gradient-parser';
 
 export const EPUB_MIME_TYPE = 'application/epub+zip';
 
@@ -94,14 +95,49 @@ function calculateLines(ctx, text, font, maxWidth) {
 	return lines;
 }
 
-export function coverCanvas({
+async function loadGoogleFont(url) {
+	return new Promise(async (resolve) => {
+		let fontFamily;
+		try {
+			[fontFamily] = new URL(url).searchParams.get('family').split(':');
+		} catch (e) {
+			return resolve();
+		}
+
+		const font = await document.fonts.load(`1em ${fontFamily}`);
+
+		if (font.length) {
+			resolve(fontFamily);
+			return;
+		}
+
+		const link = document.createElement('link');
+		link.href = url;
+		link.rel = 'stylesheet';
+		link.onload = async () => {
+			await document.fonts.load(`1em ${fontFamily}`);
+			resolve(fontFamily);
+		};
+		document.body.appendChild(link);
+	});
+}
+
+export async function coverCanvas({
 	canvas = document.createElement('canvas'),
 	title,
-	author = '',
-	fontFamily,
-	color = '#000',
-	bgColor = '#fff',
+	author = 'Ella van Durpe',
+	coverConfig: {
+		fontFamily = '',
+		color = '#000',
+		backgroundColor = '#fff',
+		fontSize = 160,
+		paddingLeft = 10,
+		paddingRight = 10,
+		verticalOffset = 0,
+	} = {},
 }) {
+	fontFamily = await loadGoogleFont(fontFamily);
+
 	const width = 1400;
 	const height = 2100;
 
@@ -114,17 +150,37 @@ export function coverCanvas({
 	const ctx = canvas.getContext('2d');
 	const maxTitleLines = 8;
 
+	let gradient;
+	let fillStyle = backgroundColor;
+
+	try {
+		[gradient] = parse(backgroundColor);
+	} catch (e) {}
+
+	if (gradient) {
+		const canvasGradient = ctx.createLinearGradient(0, 0, width, height);
+		gradient.colorStops.forEach(({ length, value, type }) => {
+			const position = length.value / 100;
+			const c =
+				type === 'rgb' || type === 'rgba'
+					? `${type}(${value.join(',')})`
+					: `#${value}`;
+			canvasGradient.addColorStop(position, c);
+		});
+		fillStyle = canvasGradient;
+	}
+
 	// Background
-	ctx.fillStyle = bgColor;
+	ctx.fillStyle = fillStyle;
 	ctx.fillRect(0, 0, width, height);
 
 	// Font settings
-	const titleFontSize = 160;
-	const authorFontSize = 100;
+	const titleFontSize = fontSize;
+	const authorFontSize = 60;
 	const lineHeight = 1.2;
 	const titleFont = `normal ${titleFontSize}px ${fontFamily}`;
 	const authorFont = `italic ${authorFontSize}px ${fontFamily}`;
-	const maxWidth = width * 0.8;
+	const maxWidth = width * (1 - paddingLeft / 100 - paddingRight / 100);
 	const spacing = 100;
 
 	// Draw title
@@ -145,14 +201,18 @@ export function coverCanvas({
 	const titleHeight = titleLines.length * titleFontSize * lineHeight;
 	const authorHeight = authorLines.length * authorFontSize * lineHeight;
 	const totalHeight = titleHeight + authorHeight;
-	let startY = height / 2 - totalHeight / 2 - (author ? spacing / 2 : 0);
+	let startY =
+		height / 2 -
+		totalHeight / 2 -
+		(author ? spacing / 2 : 0) +
+		(verticalOffset / 100) * height;
 
 	// Draw title lines
 	ctx.font = titleFont;
 	titleLines.forEach((line) => {
 		const _spacing = titleFontSize * lineHeight - titleFontSize;
 		startY += titleFontSize + _spacing / 2;
-		ctx.fillText(line, width * 0.1, startY);
+		ctx.fillText(line, width * (paddingLeft / 100), startY);
 		startY += _spacing / 2;
 	});
 
@@ -163,7 +223,7 @@ export function coverCanvas({
 		authorLines.forEach((line) => {
 			const _spacing = authorFontSize * lineHeight - authorFontSize;
 			startY += authorFontSize + _spacing / 2;
-			ctx.fillText(line, width * 0.1, startY);
+			ctx.fillText(line, width * (paddingLeft / 100), startY);
 			startY += _spacing / 2;
 		});
 	}
@@ -179,17 +239,18 @@ export async function createEPub({
 	language,
 	assets,
 	nav = [],
+	coverConfig,
 }) {
 	const zip = new JSZip();
 	zip.file('mimetype', EPUB_MIME_TYPE);
 	zip.folder('META-INF').file('container.xml', CONTAINER_XML);
 	zip.file('index.html', xmlTemplate({ title, content, language }));
+	const canvas = await coverCanvas({ title, author, coverConfig });
 	zip.file(
 		'cover.jpg',
-		await new Promise((resolve) =>
-			coverCanvas({ title, author }).toBlob(resolve, 'image/jpg', 0.9)
-		)
+		await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpg', 0.9))
 	);
+	zip.file('cover.json', JSON.stringify(coverConfig));
 	zip.file(
 		NAV_FILE,
 		navTemplate({

@@ -17,6 +17,15 @@ const postObject = {
 	id: uuidv4(),
 	title: 'Untitled Document',
 	content: '',
+	coverConfig: {
+		color: '#000000',
+		backgroundColor: '#ffffff',
+		fontSize: 160,
+		fontFamily: '',
+		paddingLeft: 10,
+		paddingRight: 10,
+		verticalOffset: 0,
+	},
 	...defaultAttributes,
 };
 const postTypeObject = {
@@ -78,6 +87,12 @@ const newStore = createReduxStore('core', {
 							...defaultAttributes,
 							...state[action.recordId],
 							...action.attributes,
+							coverConfig: state[action.recordId]
+								? {
+										...state[action.recordId].coverConfig,
+										...action.attributes.coverConfig,
+								  }
+								: action.attributes.coverConfig,
 						},
 					};
 				case 'UNDO': {
@@ -259,10 +274,7 @@ const newStore = createReduxStore('core', {
 			async ({ select, dispatch, registry }) => {
 				try {
 					const post = select.getEditedEntityRecord(kind, type, id);
-					if (!post.blocks) {
-						return;
-					}
-					const [blocks, images] = await extractImages(post.blocks);
+					const [blocks, images] = await extractImages(post.blocks??[]);
 					const chapters = blocks.filter(
 						(block) =>
 							block.name === 'core/heading' &&
@@ -286,6 +298,7 @@ const newStore = createReduxStore('core', {
 							level: chapter.attributes.level,
 							href: `#${chapter.attributes.anchor}`,
 						})),
+						coverConfig: post.coverConfig,
 					});
 
 					let fileHandle = select.getFileHandle(id);
@@ -404,6 +417,7 @@ const newStore = createReduxStore('core', {
 				}
 
 				const blocks = await addImages(text);
+				const coverJson = zip.file('cover.json');
 
 				await dispatch({
 					type: 'EDIT_ENTITY_RECORD',
@@ -412,6 +426,9 @@ const newStore = createReduxStore('core', {
 						blocks,
 						content: serialize(blocks),
 						title,
+						coverConfig: coverJson
+							? JSON.parse(await coverJson.async('string'))
+							: postObject.coverConfig,
 					},
 				});
 				dispatch({ type: 'CLEAR_UNDO_MANAGER' });

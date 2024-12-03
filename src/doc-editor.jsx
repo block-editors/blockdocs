@@ -8,14 +8,14 @@ import { unlock } from './lock-unlock';
 import { useDispatch, useSelect } from '@wordpress/data';
 import { store as noticesStore } from '@wordpress/notices';
 import { setDefaultBlockName, serialize } from '@wordpress/blocks';
-import { store as blockEditorStore } from '@wordpress/block-editor';
+import { store as blockEditorStore, __experimentalColorGradientControl as ColorPaletteControl } from '@wordpress/block-editor';
 import { convertToDocx } from './docx';
 import {
 	Button,
 	TextControl,
 	Modal,
 	ColorPalette,
-	GradientPicker,
+	RangeControl,
 } from '@wordpress/components';
 import { CommandMenu } from '@wordpress/commands';
 
@@ -53,6 +53,7 @@ const contentStyles = [
 
 import { EPUB_MIME_TYPE, coverCanvas } from './epub.js';
 import { downloadFile } from './file.js';
+import { a } from 'framer-motion/client';
 
 setDefaultBlockName('core/paragraph');
 
@@ -152,6 +153,7 @@ function DocEditor({ canUseNativeFilesystem }) {
 							.map((css) => `<style>${css}</style>`)
 							.join(''),
 					},
+					disableCustomColors: false,
 				}}
 				customSaveButton={
 					<>
@@ -211,53 +213,33 @@ function DocX() {
 	);
 }
 
-function CoverCanvas({ title, fontLoaded, style, fontFamily, color, bgColor }) {
+function CoverCanvas({ title, style, coverConfig }) {
 	const coverCanvasRef = useRef(null);
 	useEffect(() => {
 		coverCanvas({
 			canvas: coverCanvasRef.current,
 			title,
-			fontFamily,
-			color,
-			bgColor,
+			coverConfig
 		});
-	}, [title, fontLoaded, fontFamily, color, bgColor]);
+	}, [title, coverConfig]);
 	return <canvas style={ style } ref={ coverCanvasRef } />;
 }
 
 function Title({ currentPostId }) {
 	const { editEntityRecord } = useDispatch('core');
-	const title = useSelect(
+	const {title, coverConfig} = useSelect(
 		(select) =>
-			select('core').getEditedEntityRecord(null, null, currentPostId)
-				.title,
+			select('core').getEditedEntityRecord(null, null, currentPostId),
 		[currentPostId]
 	);
 	const [fontURL, setFontURL] = useState('');
-	const [fontLoaded, setFontLoaded] = useState({});
 	const [isCoverModalOpen, setIsCoverModalOpen] = useState(false);
-	const [color, setColor] = useState();
-	const [bgColor, setBgColor] = useState();
-	useEffect(() => {
-		function handleFontLoaded() {
-			setFontLoaded({});
-		}
-		document.fonts.addEventListener('loadingdone', handleFontLoaded);
-		return () => {
-			document.fonts.removeEventListener('loadingdone', handleFontLoaded);
-		};
-	}, []);
-	const fontFamily = useMemo(() => {
-		try {
-			return fontURL ? new URL(fontURL).searchParams.get('family') : '';
-		} catch (e) {
-			return '';
-		}
-	}, [fontURL]);
 	function setTitle(title) {
 		editEntityRecord(null, null, currentPostId, { title });
 	}
-	console.log('test')
+	function setCoverConfig(coverConfig) {
+		editEntityRecord(null, null, currentPostId, { coverConfig });
+	}
 	return (
 		<>
 			<PluginPostStatusInfo>
@@ -277,19 +259,8 @@ function Title({ currentPostId }) {
 						fontURL={fontURL}
 						setFontURL={setFontURL}
 						onClose={() => setIsCoverModalOpen(false)}
-						fontLoaded={fontLoaded}
-						fontFamily={fontFamily}
-						color={color}
-						bgColor={bgColor}
-						setColor={setColor}
-						setBgColor={setBgColor}
-					/>
-				)}
-				{fontURL && (
-					<link
-						href={ fontURL }
-						rel="stylesheet"
-						onLoad={ () => setFontLoaded({}) }
+						coverConfig={coverConfig}
+						setCoverConfig={setCoverConfig}
 					/>
 				)}
 			</PluginPostStatusInfo>
@@ -297,10 +268,7 @@ function Title({ currentPostId }) {
 				<CoverCanvas
 					style={ { width: '100%', border: '1px solid #000' } }
 					title={ title }
-					fontLoaded={ fontLoaded }
-					fontFamily={ fontFamily }
-					color={ color }
-					bgColor={ bgColor }
+					coverConfig={ coverConfig }
 				/>
 			</PluginPostStatusInfo>
 		</>
@@ -310,15 +278,9 @@ function Title({ currentPostId }) {
 function CoverModal({
 	title,
 	setTitle,
-	fontURL,
-	setFontURL,
-	fontLoaded,
-	fontFamily,
-	color,
-	setColor,
-	bgColor,
-	setBgColor,
 	onClose,
+	coverConfig,
+	setCoverConfig,
 }) {
 	return (
 		<Modal
@@ -343,53 +305,48 @@ function CoverModal({
 					/>
 					<TextControl
 						label="Font URL"
-						value={fontURL}
-						onChange={setFontURL}
+						value={coverConfig.fontFamily}
+						onChange={(fontFamily) =>
+							setCoverConfig({fontFamily})
+						}
 					/>
-					<ColorPalette value={ color } onChange={ setColor } />
-					<ColorPalette value={ bgColor } onChange={ setBgColor } />
-					{/* <GradientPicker
-						gradients={[
-							{
-								gradient:
-									'linear-gradient(135deg,rgba(6,147,227,1) 0%,rgb(155,81,224) 100%)',
-								name: 'Vivid cyan blue to vivid purple',
-								slug: 'vivid-cyan-blue-to-vivid-purple',
-							},
-							{
-								gradient:
-									'linear-gradient(135deg,rgb(122,220,180) 0%,rgb(0,208,130) 100%)',
-								name: 'Light green cyan to vivid green cyan',
-								slug: 'light-green-cyan-to-vivid-green-cyan',
-							},
-							{
-								gradient:
-									'linear-gradient(135deg,rgba(252,185,0,1) 0%,rgba(255,105,0,1) 100%)',
-								name: 'Luminous vivid amber to luminous vivid orange',
-								slug: 'luminous-vivid-amber-to-luminous-vivid-orange',
-							},
-							{
-								gradient:
-									'linear-gradient(135deg,rgba(255,105,0,1) 0%,rgb(207,46,46) 100%)',
-								name: 'Luminous vivid orange to vivid red',
-								slug: 'luminous-vivid-orange-to-vivid-red',
-							},
-							{
-								gradient:
-									'linear-gradient(135deg,rgb(238,238,238) 0%,rgb(169,184,195) 100%)',
-								name: 'Very light gray to cyan bluish gray',
-								slug: 'very-light-gray-to-cyan-bluish-gray',
-							},
-							{
-								gradient:
-									'linear-gradient(135deg,rgb(74,234,220) 0%,rgb(151,120,209) 20%,rgb(207,42,186) 40%,rgb(238,44,130) 60%,rgb(251,105,98) 80%,rgb(254,248,76) 100%)',
-								name: 'Cool to warm spectrum',
-								slug: 'cool-to-warm-spectrum',
-							},
-						]}
-						onChange={setBgColor}
-						value={bgColor}
-					/> */}
+					<ColorPalette value={ coverConfig.color } onChange={ (color) => setCoverConfig({color}) } />
+					<ColorPaletteControl
+						onColorChange={(color) => color && setCoverConfig({backgroundColor: color})}
+						onGradientChange={(gradient) => gradient && setCoverConfig({backgroundColor: gradient})}
+						gradientValue={coverConfig.backgroundColor}
+						colorValue={coverConfig.backgroundColor}
+					/>
+					<RangeControl
+						label="Font Size"
+						max={1000}
+						min={100}
+						value={coverConfig.fontSize}
+						onChange={(fontSize) =>
+							setCoverConfig({fontSize})
+						}
+					/>
+					<RangeControl
+						label="Padding Left"
+						max={100}
+						min={0}
+						value={coverConfig.paddingLeft}
+						onChange={(paddingLeft) => setCoverConfig({paddingLeft})}
+					/>
+					<RangeControl
+						label="Padding Right"
+						max={100}
+						min={0}
+						value={coverConfig.paddingRight}
+						onChange={(paddingRight) => setCoverConfig({paddingRight})}
+					/>
+					<RangeControl
+						label="Vertical offset"
+						max={50}
+						min={-50}
+						value={coverConfig.verticalOffset}
+						onChange={(verticalOffset) => setCoverConfig({verticalOffset})}
+					/>
 				</div>
 				<div style={{ flex: 1, height: '100%' }}>
 					<CoverCanvas
@@ -401,10 +358,7 @@ function CoverModal({
 							margin: '0 auto',
 						} }
 						title={title}
-						fontLoaded={fontLoaded}
-						fontFamily={fontFamily}
-						color={color}
-						bgColor={bgColor}
+						coverConfig={coverConfig}
 					/>
 				</div>
 			</div>
