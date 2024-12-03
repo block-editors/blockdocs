@@ -98,9 +98,16 @@ export function coverCanvas({
 	canvas = document.createElement('canvas'),
 	title,
 	author = '',
+	fontFamily,
+	color = '#000',
+	bgColor = '#fff',
 }) {
 	const width = 1400;
 	const height = 2100;
+
+	if (!fontFamily) {
+		fontFamily = systemFont;
+	}
 
 	canvas.width = width;
 	canvas.height = height;
@@ -108,20 +115,20 @@ export function coverCanvas({
 	const maxTitleLines = 8;
 
 	// Background
-	ctx.fillStyle = '#fff';
+	ctx.fillStyle = bgColor;
 	ctx.fillRect(0, 0, width, height);
 
 	// Font settings
 	const titleFontSize = 160;
 	const authorFontSize = 100;
 	const lineHeight = 1.2;
-	const titleFont = `normal ${titleFontSize}px ` + systemFont;
-	const authorFont = `italic ${authorFontSize}px ` + systemFont;
+	const titleFont = `normal ${titleFontSize}px ${fontFamily}`;
+	const authorFont = `italic ${authorFontSize}px ${fontFamily}`;
 	const maxWidth = width * 0.8;
 	const spacing = 100;
 
 	// Draw title
-	ctx.fillStyle = '#000';
+	ctx.fillStyle = color;
 	ctx.textAlign = 'left';
 
 	// Calculate lines for both texts

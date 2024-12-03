@@ -15,3 +15,7 @@ body {
 .editor-post-card-panel ~ div > .components-flex {
   display: none;
 }
+
+.blockdocs-cover-modal .components-modal__header + div {
+  height: 100%;
+}
