@@ -16,6 +16,7 @@ import {
 	Modal,
 	ColorPalette,
 	RangeControl,
+	FormFileUpload,
 } from '@wordpress/components';
 import { CommandMenu } from '@wordpress/commands';
 
@@ -347,6 +348,12 @@ function CoverModal({
 						value={coverConfig.verticalOffset}
 						onChange={(verticalOffset) => setCoverConfig({verticalOffset})}
 					/>
+					<FormFileUpload
+						accept=".jpg"
+						onChange={(event) => setCoverConfig({custom: event.target.files[0]})}
+					>
+						Upload custom cover
+					</FormFileUpload>
 				</div>
 				<div style={{ flex: 1, height: '100%' }}>
 					<CoverCanvas

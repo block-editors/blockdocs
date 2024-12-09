@@ -1,5 +1,5 @@
 import { createReduxStore, register, combineReducers } from '@wordpress/data';
-import { serialize, parse } from '@wordpress/blocks';
+import { serialize, parse, createBlock } from '@wordpress/blocks';
 import { store as noticesStore } from '@wordpress/notices';
 import { createUndoManager } from '@wordpress/undo-manager';
 import JSZip from 'jszip';
@@ -16,7 +16,9 @@ const defaultAttributes = {
 const postObject = {
 	id: uuidv4(),
 	title: 'Untitled Document',
-	content: '',
+	content: `<!-- wp:paragraph -->
+<p></p>
+<!-- /wp:paragraph -->`,
 	coverConfig: {
 		color: '#000000',
 		backgroundColor: '#ffffff',
@@ -325,11 +327,18 @@ const newStore = createReduxStore('core', {
 							suggestedName: `${post.title}.epub`,
 						};
 						fileHandle = await window.showSaveFilePicker(options);
-						await dispatch({
-							type: 'EDIT_ENTITY_RECORD',
-							recordId: id,
-							attributes: { title: fileHandle.name },
-						});
+						if ( /[\p{Emoji_Presentation}\p{Emoji}\uFE0F]/u.test(fileHandle.name)) {
+							registry
+								.dispatch(noticesStore)
+								.createWarningNotice('Make sure to remove emoji from the file name when sending to Kindle.', {
+										id: 'emoji-notice',
+									});
+						}
+						// await dispatch({
+						// 	type: 'EDIT_ENTITY_RECORD',
+						// 	recordId: id,
+						// 	attributes: { title: fileHandle.name },
+						// });
 						await dispatch({
 							type: 'SET_FILE_HANDLE',
 							fileHandle,
@@ -388,8 +397,8 @@ const newStore = createReduxStore('core', {
 				const packageEl = xmlDoc.querySelector('package');
 
 				const idAttrName = packageEl.getAttribute('unique-identifier');
-				let id = xmlDoc.getElementById(idAttrName).textContent;
-				if (id === 'unique-id') {
+				let id = xmlDoc.getElementById(idAttrName)?.textContent;
+				if (! id || id === 'unique-id') {
 					id = uuidv4();
 				}
 				const titleElement = Array.from(
@@ -416,8 +425,12 @@ const newStore = createReduxStore('core', {
 					return parse(doc.body.innerHTML);
 				}
 
-				const blocks = await addImages(text);
+				const blocks = await addImages(text) ?? [];
 				const coverJson = zip.file('cover.json');
+
+				if ( blocks.length === 0 ) {
+					blocks.push( createBlock('core/paragraph'));
+				}
 
 				await dispatch({
 					type: 'EDIT_ENTITY_RECORD',

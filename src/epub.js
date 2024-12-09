@@ -14,11 +14,9 @@ const CONTAINER_XML = `<?xml version="1.0"?>
 </container>
 `;
 
-const xmlTemplate = ({
-	title,
-	content,
-	language,
-}) => `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+// epubcheck requires <!DOCTYPE html> even though it's XHTML.
+const xmlTemplate = ({ title, content, language }) => {
+	const template = `<!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml" lang="${language}">
 <head>
 <!-- For XHTML compatibility. -->
@@ -30,6 +28,11 @@ ${content}
 </body>
 </html>
 `;
+	const parser = new window.DOMParser();
+	const serializer = new window.XMLSerializer();
+	const doc = parser.parseFromString(template, 'text/html');
+	return serializer.serializeToString(doc);
+};
 
 function opfTemplate({ title, uniqueId, modified, language, assets = [] }) {
 	return `<?xml version="1.0" encoding="UTF-8" ?>
@@ -43,6 +46,7 @@ function opfTemplate({ title, uniqueId, modified, language, assets = [] }) {
 	    <dc:identifier id="unique-id">${uniqueId}</dc:identifier>
 	    <dc:language>${language}</dc:language>
 	    <meta property="dcterms:modified">${modified}</meta>
+		<meta name="cover" content="cover" />
 	</metadata>
 	<manifest>
 	    <item id="cover" href="cover.jpg" media-type="image/jpg" />
@@ -125,7 +129,7 @@ async function loadGoogleFont(url) {
 export async function coverCanvas({
 	canvas = document.createElement('canvas'),
 	title,
-	author = 'Ella van Durpe',
+	author = '',
 	coverConfig: {
 		fontFamily = '',
 		color = '#000',
@@ -245,11 +249,18 @@ export async function createEPub({
 	zip.file('mimetype', EPUB_MIME_TYPE);
 	zip.folder('META-INF').file('container.xml', CONTAINER_XML);
 	zip.file('index.html', xmlTemplate({ title, content, language }));
-	const canvas = await coverCanvas({ title, author, coverConfig });
-	zip.file(
-		'cover.jpg',
-		await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpg', 0.9))
-	);
+	if (coverConfig.custom) {
+		const blob = await coverConfig.custom.arrayBuffer();
+		zip.file('cover.jpg', blob);
+	} else {
+		const canvas = await coverCanvas({ title, author, coverConfig });
+		zip.file(
+			'cover.jpg',
+			await new Promise((resolve) =>
+				canvas.toBlob(resolve, 'image/jpg', 0.9)
+			)
+		);
+	}
 	zip.file('cover.json', JSON.stringify(coverConfig));
 	zip.file(
 		NAV_FILE,
