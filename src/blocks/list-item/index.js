@@ -20,7 +20,7 @@ export const settings = {
 	icon,
 	edit,
 	save,
-	merge(attributes, attributesToMerge) {
+	merge( attributes, attributesToMerge ) {
 		return {
 			...attributes,
 			content: attributes.content + attributesToMerge.content,
@@ -29,4 +29,4 @@ export const settings = {
 	transforms,
 };
 
-export const init = () => initBlock({ name, metadata, settings });
+export const init = () => initBlock( { name, metadata, settings } );

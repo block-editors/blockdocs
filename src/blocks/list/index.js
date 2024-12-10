@@ -23,23 +23,23 @@ const settings = {
 		innerBlocks: [
 			{
 				name: 'core/checklist-item',
-				attributes: { content: __('Alice.') },
+				attributes: { content: __( 'Alice.' ) },
 			},
 			{
 				name: 'core/checklist-item',
-				attributes: { content: __('The White Rabbit.') },
+				attributes: { content: __( 'The White Rabbit.' ) },
 			},
 			{
 				name: 'core/checklist-item',
-				attributes: { content: __('The Cheshire Cat.') },
+				attributes: { content: __( 'The Cheshire Cat.' ) },
 			},
 			{
 				name: 'core/checklist-item',
-				attributes: { content: __('The Mad Hatter.') },
+				attributes: { content: __( 'The Mad Hatter.' ) },
 			},
 			{
 				name: 'core/checklist-item',
-				attributes: { content: __('The Queen of Hearts.') },
+				attributes: { content: __( 'The Queen of Hearts.' ) },
 			},
 		],
 	},
@@ -50,4 +50,4 @@ const settings = {
 
 export { settings };
 
-export const init = () => initBlock({ name, metadata, settings });
+export const init = () => initBlock( { name, metadata, settings } );

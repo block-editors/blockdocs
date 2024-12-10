@@ -30,27 +30,27 @@ import './app.css';
 export async function getSelectedFolderURL() {
 	let directoryHandle;
 	try {
-		directoryHandle = await get('directoryHandle');
-	} catch (e) {}
-	if (directoryHandle) {
+		directoryHandle = await get( 'directoryHandle' );
+	} catch ( e ) {}
+	if ( directoryHandle ) {
 		return directoryHandle;
 	}
-	const selectedFolderURL = await Preferences.get({
+	const selectedFolderURL = await Preferences.get( {
 		key: 'selectedFolderURL',
-	});
-	if (selectedFolderURL?.value) {
+	} );
+	if ( selectedFolderURL?.value ) {
 		return selectedFolderURL.value;
 	}
 
 	try {
 		const defaultDir = await Filesystem.getDefaultDirectory();
 
-		if (defaultDir.url) {
+		if ( defaultDir.url ) {
 			return defaultDir.url;
 		}
-	} catch (e) {
+	} catch ( e ) {
 		// eslint-disable-next-line no-alert
-		window.alert(e);
+		window.alert( e );
 	}
 }
 
@@ -58,24 +58,24 @@ async function load() {
 	let canUseNativeFilesystem = true;
 	try {
 		await Filesystem.checkPermissions();
-	} catch (e) {
+	} catch ( e ) {
 		// eslint-disable-next-line no-alert
 		canUseNativeFilesystem = false;
 	}
 
 	const selectedFolderURL = await getSelectedFolderURL();
-	const root = createRoot(document.getElementById('app'));
+	const root = createRoot( document.getElementById( 'app' ) );
 
-	root.render(app({ selectedFolderURL, canUseNativeFilesystem }));
+	root.render( app( { selectedFolderURL, canUseNativeFilesystem } ) );
 }
 
 load();
 
-(async () => {
+( async () => {
 	let StatusBar, Style;
 
-	if (import.meta.env.MODE !== 'web') {
-		const module = await import('@capacitor/status-bar');
+	if ( import.meta.env.MODE !== 'web' ) {
+		const module = await import( '@capacitor/status-bar' );
 		StatusBar = module.StatusBar;
 		Style = module.Style;
 	}
@@ -85,21 +85,21 @@ load();
 			'meta[name="theme-color"]'
 		);
 		const backgroundColor = window
-			.getComputedStyle(document.documentElement)
-			.getPropertyValue('--wp-components-color-background');
-		metaThemeColor.setAttribute('content', backgroundColor);
+			.getComputedStyle( document.documentElement )
+			.getPropertyValue( '--wp-components-color-background' );
+		metaThemeColor.setAttribute( 'content', backgroundColor );
 
-		if (import.meta.env.MODE !== 'web') {
-			if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-				StatusBar.setStyle({ style: Style.Dark });
+		if ( import.meta.env.MODE !== 'web' ) {
+			if ( window.matchMedia( '(prefers-color-scheme: dark)' ).matches ) {
+				StatusBar.setStyle( { style: Style.Dark } );
 			} else {
-				StatusBar.setStyle({ style: Style.Light });
+				StatusBar.setStyle( { style: Style.Light } );
 			}
 		}
 	}
 
 	updateThemeColor();
 	window
-		.matchMedia('(prefers-color-scheme: dark)')
-		.addEventListener('change', updateThemeColor);
-})();
+		.matchMedia( '(prefers-color-scheme: dark)' )
+		.addEventListener( 'change', updateThemeColor );
+} )();

@@ -35,26 +35,34 @@ const postTypeObject = {
 	supports: {},
 };
 
-async function extractImages(blocks) {
+async function extractImages( blocks ) {
 	const images = new Map();
 	const newBlocks = await Promise.all(
-		blocks.map(async (block) => {
+		blocks.map( async ( block ) => {
 			const { innerBlocks = [], attributes, name } = block;
-			const [newInnerBlocks, moreImages] = await extractImages(
+			const [ newInnerBlocks, moreImages ] = await extractImages(
 				innerBlocks,
 				images
 			);
-			for (const image of moreImages) {
-				images.set(image.id, image);
+			for ( const image of moreImages ) {
+				images.set( image.id, image );
 			}
-			if (name === 'core/image' && attributes.url) {
+			if ( name === 'core/image' && attributes.url ) {
 				let blob;
 				try {
-					blob = await fetch(attributes.url).then((r) => r.blob());
-				} catch (e) {
-					throw new Error('Could not load images, please add download them manually.');
+					blob = await fetch( attributes.url ).then( ( r ) =>
+						r.blob()
+					);
+				} catch ( e ) {
+					throw new Error(
+						'Could not load images, please add download them manually.'
+					);
 				}
-				const relPath = attributes.url.split('#').pop().split('/').pop();
+				const relPath = attributes.url
+					.split( '#' )
+					.pop()
+					.split( '/' )
+					.pop();
 				images.set( relPath, blob );
 				return {
 					...block,
@@ -70,31 +78,31 @@ async function extractImages(blocks) {
 				...block,
 				innerBlocks: newInnerBlocks,
 			};
-		})
+		} )
 	);
-	return [newBlocks, images];
+	return [ newBlocks, images ];
 }
 
-const newStore = createReduxStore('core', {
-	reducer: combineReducers({
-		currentPostId: (state = postObject.id, action) => {
+const newStore = createReduxStore( 'core', {
+	reducer: combineReducers( {
+		currentPostId: ( state = postObject.id, action ) => {
 			return action.type === 'SET_CURRENT_POST_ID'
 				? action.postId
 				: state;
 		},
-		posts: (state = { [postObject.id]: postObject }, action) => {
-			switch (action.type) {
+		posts: ( state = { [ postObject.id ]: postObject }, action ) => {
+			switch ( action.type ) {
 				case 'EDIT_ENTITY_RECORD':
 					return {
 						...state,
-						[action.recordId]: {
+						[ action.recordId ]: {
 							id: action.recordId,
 							...defaultAttributes,
-							...state[action.recordId],
+							...state[ action.recordId ],
 							...action.attributes,
-							coverConfig: state[action.recordId]
+							coverConfig: state[ action.recordId ]
 								? {
-										...state[action.recordId].coverConfig,
+										...state[ action.recordId ].coverConfig,
 										...action.attributes.coverConfig,
 								  }
 								: action.attributes.coverConfig,
@@ -103,66 +111,72 @@ const newStore = createReduxStore('core', {
 				case 'UNDO': {
 					return {
 						...state,
-						...action.record.reduce((posts, { id, changes }) => {
-							posts[id] = {
-								...state[id],
-								...Object.keys(changes).reduce((acc, key) => {
-									acc[key] = changes[key].from;
-									return acc;
-								}, {}),
+						...action.record.reduce( ( posts, { id, changes } ) => {
+							posts[ id ] = {
+								...state[ id ],
+								...Object.keys( changes ).reduce(
+									( acc, key ) => {
+										acc[ key ] = changes[ key ].from;
+										return acc;
+									},
+									{}
+								),
 							};
 							return posts;
-						}, {}),
+						}, {} ),
 					};
 				}
 				case 'REDO': {
 					return {
 						...state,
-						...action.record.reduce((posts, { id, changes }) => {
-							posts[id] = {
-								...state[id],
-								...Object.keys(changes).reduce((acc, key) => {
-									acc[key] = changes[key].to;
-									return acc;
-								}, {}),
+						...action.record.reduce( ( posts, { id, changes } ) => {
+							posts[ id ] = {
+								...state[ id ],
+								...Object.keys( changes ).reduce(
+									( acc, key ) => {
+										acc[ key ] = changes[ key ].to;
+										return acc;
+									},
+									{}
+								),
 							};
 							return posts;
-						}, {}),
+						}, {} ),
 					};
 				}
 			}
 			return state;
 		},
-		fileHandle: (state = {}, { type, fileHandle, id }) => {
+		fileHandle: ( state = {}, { type, fileHandle, id } ) => {
 			return type === 'SET_FILE_HANDLE'
-				? { ...state, [id]: fileHandle }
+				? { ...state, [ id ]: fileHandle }
 				: state;
 		},
-		undoManager: (state = createUndoManager(), { type }) => {
+		undoManager: ( state = createUndoManager(), { type } ) => {
 			return type === 'CLEAR_UNDO_MANAGER' ? createUndoManager() : state;
 		},
-	}),
+	} ),
 	selectors: {
-		getCurrentPostId: (state) => {
+		getCurrentPostId: ( state ) => {
 			return state.currentPostId;
 		},
-		getEntityRecord: (state, kind, type, id) => {
-			return state.posts[id];
+		getEntityRecord: ( state, kind, type, id ) => {
+			return state.posts[ id ];
 		},
 		getEntityRecords: () => {
 			return EMPTY_ARRAY;
 		},
-		getEntityRecordEdits: (state, kind, type, id) => {
-			return state.posts[id];
+		getEntityRecordEdits: ( state, kind, type, id ) => {
+			return state.posts[ id ];
 		},
-		getRawEntityRecord: (state, kind, type, id) => {
-			return state.posts[id];
+		getRawEntityRecord: ( state, kind, type, id ) => {
+			return state.posts[ id ];
 		},
-		getEditedEntityRecord: (state, kind, type, id) => {
-			return state.posts[id];
+		getEditedEntityRecord: ( state, kind, type, id ) => {
+			return state.posts[ id ];
 		},
-		canUser: (state, action) => {
-			return ['read', 'update', 'create'].includes(action);
+		canUser: ( state, action ) => {
+			return [ 'read', 'update', 'create' ].includes( action );
 		},
 		getUserPatternCategories: () => {
 			return EMPTY_ARRAY;
@@ -175,10 +189,10 @@ const newStore = createReduxStore('core', {
 		getPostType: () => {
 			return postTypeObject;
 		},
-		hasUndo: (state) => {
+		hasUndo: ( state ) => {
 			return state.undoManager.hasUndo();
 		},
-		hasRedo: (state) => {
+		hasRedo: ( state ) => {
 			return state.undoManager.hasRedo();
 		},
 		hasEditsForEntityRecord: () => {},
@@ -202,56 +216,60 @@ const newStore = createReduxStore('core', {
 		getBlockPatternsForPostType: () => {
 			return EMPTY_ARRAY;
 		},
-		getEntityRecordNonTransientEdits: (state, kind, type, id) => {
-			return state.posts[id];
+		getEntityRecordNonTransientEdits: ( state, kind, type, id ) => {
+			return state.posts[ id ];
 		},
 		getLastEntitySaveError: () => {
 			return null;
 		},
 		getMedia: () => {},
-		getFileHandle: (state, id) => {
-			return state.fileHandle[id];
+		getFileHandle: ( state, id ) => {
+			return state.fileHandle[ id ];
 		},
-		getUndoManager: (state) => {
+		getUndoManager: ( state ) => {
 			return state.undoManager;
 		},
-		hasFinishedResolution: (state, kind, type, id) => {
+		hasFinishedResolution: () => {
 			return true;
 		},
 	},
 	actions: {
 		undo:
 			() =>
-			async ({ select, dispatch }) => {
+			async ( { select, dispatch } ) => {
 				const undoRecord = select.getUndoManager().undo();
-				if (!undoRecord) {
+				if ( ! undoRecord ) {
 					return;
 				}
-				await dispatch({ type: 'UNDO', record: undoRecord });
+				await dispatch( { type: 'UNDO', record: undoRecord } );
 			},
 		redo:
 			() =>
-			async ({ select, dispatch }) => {
+			async ( { select, dispatch } ) => {
 				const redoRecord = select.getUndoManager().redo();
-				if (!redoRecord) {
+				if ( ! redoRecord ) {
 					return;
 				}
-				await dispatch({ type: 'REDO', record: redoRecord });
+				await dispatch( { type: 'REDO', record: redoRecord } );
 			},
 		editEntityRecord:
-			(kind, type, id, attributes, options = {}) =>
-			async ({ select, dispatch }) => {
-				if (!options.undoIgnore) {
-					const state = select.getEditedEntityRecord(kind, type, id);
+			( kind, type, id, attributes, options = {} ) =>
+			async ( { select, dispatch } ) => {
+				if ( ! options.undoIgnore ) {
+					const state = select.getEditedEntityRecord(
+						kind,
+						type,
+						id
+					);
 					select.getUndoManager().addRecord(
 						[
 							{
 								id,
-								changes: Object.keys(attributes).reduce(
-									(acc, key) => {
-										acc[key] = {
-											from: state[key],
-											to: attributes[key],
+								changes: Object.keys( attributes ).reduce(
+									( acc, key ) => {
+										acc[ key ] = {
+											from: state[ key ],
+											to: attributes[ key ],
 										};
 										return acc;
 									},
@@ -261,58 +279,62 @@ const newStore = createReduxStore('core', {
 						],
 						options.isCached
 					);
-					if (attributes.blocks) {
-						const [blocks] = await extractImages(attributes.blocks);
-						const local = serialize(blocks);
-						window.localStorage.setItem(id, local);
-						window.localStorage.setItem(id + '-time', Date.now());
+					if ( attributes.blocks ) {
+						const [ blocks ] = await extractImages(
+							attributes.blocks
+						);
+						const local = serialize( blocks );
+						window.localStorage.setItem( id, local );
+						window.localStorage.setItem( id + '-time', Date.now() );
 					}
 				}
-				await dispatch({
+				await dispatch( {
 					type: 'EDIT_ENTITY_RECORD',
 					attributes,
 					recordId: id,
-				});
+				} );
 			},
 		saveEntityRecord:
-			(kind, type, id) =>
-			async ({ select, dispatch, registry }) => {
+			( kind, type, id ) =>
+			async ( { select, dispatch, registry } ) => {
 				try {
-					const post = select.getEditedEntityRecord(kind, type, id);
-					const [blocks, images] = await extractImages(post.blocks??[]);
+					const post = select.getEditedEntityRecord( kind, type, id );
+					const [ blocks, images ] = await extractImages(
+						post.blocks ?? []
+					);
 					const chapters = blocks.filter(
-						(block) =>
+						( block ) =>
 							block.name === 'core/heading' &&
 							block.attributes.content
 					);
 					// Add chapter IDs to the blocks
-					chapters.forEach((block) => {
+					chapters.forEach( ( block ) => {
 						block.attributes.anchor = block.attributes.content
 							.toLowerCase()
-							.replace(/[^a-z0-9]+/g, '-');
-					});
-					const content = serialize(blocks);
-					const blob = await createEPub({
+							.replace( /[^a-z0-9]+/g, '-' );
+					} );
+					const content = serialize( blocks );
+					const blob = await createEPub( {
 						title: post.title,
 						uniqueId: id,
 						content,
 						language: 'en',
 						assets: images,
-						nav: chapters.map((chapter) => ({
+						nav: chapters.map( ( chapter ) => ( {
 							title: chapter.attributes.content,
 							level: chapter.attributes.level,
-							href: `#${chapter.attributes.anchor}`,
-						})),
+							href: `#${ chapter.attributes.anchor }`,
+						} ) ),
 						coverConfig: post.coverConfig,
-					});
+					} );
 
-					let fileHandle = select.getFileHandle(id);
+					let fileHandle = select.getFileHandle( id );
 
-					if (!fileHandle) {
-						if (!window.showSaveFilePicker) {
-							downloadFile(blob, `${post.title}.epub`);
+					if ( ! fileHandle ) {
+						if ( ! window.showSaveFilePicker ) {
+							downloadFile( blob, `${ post.title }.epub` );
 							registry
-								.dispatch(noticesStore)
+								.dispatch( noticesStore )
 								.createSuccessNotice(
 									'Item downloaded. Please use Chrome to write to an existing file.',
 									{ id: 'save-notice' }
@@ -324,146 +346,163 @@ const newStore = createReduxStore('core', {
 								{
 									description:
 										'A file to store your document.',
-									accept: { [EPUB_MIME_TYPE]: ['.epub'] },
+									accept: { [ EPUB_MIME_TYPE ]: [ '.epub' ] },
 								},
 							],
-							suggestedName: `${post.title}.epub`,
+							suggestedName: `${ post.title }.epub`,
 						};
-						fileHandle = await window.showSaveFilePicker(options);
-						if ( /[\p{Emoji_Presentation}\p{Emoji}\uFE0F]/u.test(fileHandle.name)) {
+						fileHandle = await window.showSaveFilePicker( options );
+						if (
+							/[\p{Emoji_Presentation}\p{Emoji}\uFE0F]/u.test(
+								fileHandle.name
+							)
+						) {
 							registry
-								.dispatch(noticesStore)
-								.createWarningNotice('Make sure to remove emoji from the file name when sending to Kindle.', {
+								.dispatch( noticesStore )
+								.createWarningNotice(
+									'Make sure to remove emoji from the file name when sending to Kindle.',
+									{
 										id: 'emoji-notice',
-									});
+									}
+								);
 						}
 						// await dispatch({
 						// 	type: 'EDIT_ENTITY_RECORD',
 						// 	recordId: id,
 						// 	attributes: { title: fileHandle.name },
 						// });
-						await dispatch({
+						await dispatch( {
 							type: 'SET_FILE_HANDLE',
 							fileHandle,
 							id,
-						});
+						} );
 					}
 					const writableStream = await fileHandle.createWritable();
 
-					await writableStream.write(blob);
+					await writableStream.write( blob );
 					await writableStream.close();
 					registry
-						.dispatch(noticesStore)
-						.createSuccessNotice('Item updated', {
+						.dispatch( noticesStore )
+						.createSuccessNotice( 'Item updated', {
 							id: 'save-notice',
-						});
-				} catch (e) {
-					window.alert(e.message);
+						} );
+				} catch ( e ) {
+					// eslint-disable-next-line no-alert
+					window.alert( e.message );
 				}
 			},
 		__unstableCreateUndoLevel:
 			() =>
-			({ select }) => {
+			( { select } ) => {
 				select.getUndoManager().addRecord();
 			},
 		setFile:
-			(fileHandle) =>
-			async ({ dispatch, registry }) => {
+			( fileHandle ) =>
+			async ( { dispatch, registry } ) => {
 				let file = fileHandle;
-				if (fileHandle.getFile) {
+				if ( fileHandle.getFile ) {
 					file = await fileHandle.getFile();
 				}
 				const { lastModified } = file;
-				const zip = await JSZip.loadAsync(file);
-				const index = zip.file('index.html');
+				const zip = await JSZip.loadAsync( file );
+				const index = zip.file( 'index.html' );
 
-				if (!index) {
+				if ( ! index ) {
 					// eslint-disable-next-line no-alert
-					window.alert('This file was not created with this app.');
+					window.alert( 'This file was not created with this app.' );
 					return;
 				}
 
-				const opf = zip.file(OPF_FILE);
+				const opf = zip.file( OPF_FILE );
 
-				if (!opf) {
+				if ( ! opf ) {
 					// eslint-disable-next-line no-alert
-					window.alert('No meta data found.');
+					window.alert( 'No meta data found.' );
 					return;
 				}
 
 				const parser = new window.DOMParser();
 				const xmlDoc = parser.parseFromString(
-					await opf.async('string'),
+					await opf.async( 'string' ),
 					'text/xml'
 				);
 
-				const packageEl = xmlDoc.querySelector('package');
+				const packageEl = xmlDoc.querySelector( 'package' );
 
-				const idAttrName = packageEl.getAttribute('unique-identifier');
-				let id = xmlDoc.getElementById(idAttrName)?.textContent;
-				if (! id || id === 'unique-id') {
+				const idAttrName =
+					packageEl.getAttribute( 'unique-identifier' );
+				let id = xmlDoc.getElementById( idAttrName )?.textContent;
+				if ( ! id || id === 'unique-id' ) {
 					id = uuidv4();
 				}
 				const titleElement = Array.from(
-					xmlDoc.querySelector('metadata').children
-				).find((el) => el.prefix === 'dc' && el.localName === 'title');
+					xmlDoc.querySelector( 'metadata' ).children
+				).find(
+					( el ) => el.prefix === 'dc' && el.localName === 'title'
+				);
 				const title = titleElement.textContent;
 
-				const text = await index.async('string');
+				const text = await index.async( 'string' );
 
-				async function addImages(string) {
-					const doc = parser.parseFromString(string, 'text/html');
-					for (const img of doc.querySelectorAll('img')) {
-						const src = img.getAttribute('src');
-						if (!src) {
+				async function addImages( string ) {
+					const doc = parser.parseFromString( string, 'text/html' );
+					for ( const img of doc.querySelectorAll( 'img' ) ) {
+						const src = img.getAttribute( 'src' );
+						if ( ! src ) {
 							continue;
 						}
 						img.src =
 							URL.createObjectURL(
-								await zip.file(src).async('blob')
+								await zip.file( src ).async( 'blob' )
 							) +
 							'#' +
 							src;
 					}
-					return parse(doc.body.innerHTML);
+					return parse( doc.body.innerHTML );
 				}
 
-				const blocks = await addImages(text) ?? [];
-				const coverJson = zip.file('cover.json');
+				const blocks = ( await addImages( text ) ) ?? [];
+				const coverJson = zip.file( 'cover.json' );
 
 				if ( blocks.length === 0 ) {
-					blocks.push( createBlock('core/paragraph'));
+					blocks.push( createBlock( 'core/paragraph' ) );
 				}
 
-				await dispatch({
+				await dispatch( {
 					type: 'EDIT_ENTITY_RECORD',
 					recordId: id,
 					attributes: {
 						blocks,
-						content: serialize(blocks),
+						content: serialize( blocks ),
 						title,
 						coverConfig: coverJson
-							? JSON.parse(await coverJson.async('string'))
+							? JSON.parse( await coverJson.async( 'string' ) )
 							: postObject.coverConfig,
 					},
-				});
-				dispatch({ type: 'CLEAR_UNDO_MANAGER' });
-				dispatch({ type: 'SET_CURRENT_POST_ID', postId: id });
-				if (fileHandle?.getFile) {
-					await dispatch({ type: 'SET_FILE_HANDLE', fileHandle, id });
+				} );
+				dispatch( { type: 'CLEAR_UNDO_MANAGER' } );
+				dispatch( { type: 'SET_CURRENT_POST_ID', postId: id } );
+				if ( fileHandle?.getFile ) {
+					await dispatch( {
+						type: 'SET_FILE_HANDLE',
+						fileHandle,
+						id,
+					} );
 				}
 
 				// Check if local storage has the same content
-				const local = window.localStorage.getItem(id);
-				const localTime = window.localStorage.getItem(id + '-time');
-				if (local && localTime && lastModified < localTime) {
-					const _blocks = await addImages(`<body>${local}</body>`);
-					await dispatch.editEntityRecord(null, null, id, {
+				const local = window.localStorage.getItem( id );
+				const localTime = window.localStorage.getItem( id + '-time' );
+				if ( local && localTime && lastModified < localTime ) {
+					const _blocks = await addImages(
+						`<body>${ local }</body>`
+					);
+					await dispatch.editEntityRecord( null, null, id, {
 						blocks: _blocks,
-						content: serialize(_blocks),
-					});
+						content: serialize( _blocks ),
+					} );
 					registry
-						.dispatch(noticesStore)
+						.dispatch( noticesStore )
 						.createWarningNotice(
 							'Recovered unsaved changes. Press Undo to revert.',
 							{ id: 'local-save' }
@@ -472,5 +511,5 @@ const newStore = createReduxStore('core', {
 			},
 	},
 	resolvers: {},
-});
-register(newStore);
+} );
+register( newStore );

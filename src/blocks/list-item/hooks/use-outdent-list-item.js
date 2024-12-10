@@ -13,7 +13,7 @@ export default function useOutdentListItem() {
 		removeBlock,
 		insertBlock,
 		updateBlockListSettings,
-	} = useDispatch(blockEditorStore);
+	} = useDispatch( blockEditorStore );
 	const {
 		getBlockRootClientId,
 		getBlockName,
@@ -22,65 +22,67 @@ export default function useOutdentListItem() {
 		getSelectedBlockClientIds,
 		getBlock,
 		getBlockListSettings,
-	} = useSelect(blockEditorStore);
+	} = useSelect( blockEditorStore );
 
-	function getParentListItemId(id) {
-		const listId = getBlockRootClientId(id);
-		const parentListItemId = getBlockRootClientId(listId);
-		if (!parentListItemId) {
+	function getParentListItemId( id ) {
+		const listId = getBlockRootClientId( id );
+		const parentListItemId = getBlockRootClientId( listId );
+		if ( ! parentListItemId ) {
 			return;
 		}
-		if (getBlockName(parentListItemId) !== 'core/checklist-item') {
+		if ( getBlockName( parentListItemId ) !== 'core/checklist-item' ) {
 			return;
 		}
 		return parentListItemId;
 	}
 
-	return useCallback((clientIds = getSelectedBlockClientIds()) => {
-		if (!Array.isArray(clientIds)) {
-			clientIds = [clientIds];
+	return useCallback( ( clientIds = getSelectedBlockClientIds() ) => {
+		if ( ! Array.isArray( clientIds ) ) {
+			clientIds = [ clientIds ];
 		}
 
-		if (!clientIds.length) {
+		if ( ! clientIds.length ) {
 			return;
 		}
 
-		const firstClientId = clientIds[0];
+		const firstClientId = clientIds[ 0 ];
 
 		// Can't outdent if it's not a list item.
-		if (getBlockName(firstClientId) !== 'core/checklist-item') {
+		if ( getBlockName( firstClientId ) !== 'core/checklist-item' ) {
 			return;
 		}
 
-		const parentListItemId = getParentListItemId(firstClientId);
+		const parentListItemId = getParentListItemId( firstClientId );
 
 		// Can't outdent if it's at the top level.
-		if (!parentListItemId) {
+		if ( ! parentListItemId ) {
 			return;
 		}
 
-		const parentListId = getBlockRootClientId(firstClientId);
-		const lastClientId = clientIds[clientIds.length - 1];
-		const order = getBlockOrder(parentListId);
-		const followingListItems = order.slice(getBlockIndex(lastClientId) + 1);
+		const parentListId = getBlockRootClientId( firstClientId );
+		const lastClientId = clientIds[ clientIds.length - 1 ];
+		const order = getBlockOrder( parentListId );
+		const followingListItems = order.slice(
+			getBlockIndex( lastClientId ) + 1
+		);
 
-		registry.batch(() => {
-			if (followingListItems.length) {
-				let nestedListId = getBlockOrder(firstClientId)[0];
+		registry.batch( () => {
+			if ( followingListItems.length ) {
+				let nestedListId = getBlockOrder( firstClientId )[ 0 ];
 
-				if (!nestedListId) {
+				if ( ! nestedListId ) {
 					const nestedListBlock = cloneBlock(
-						getBlock(parentListId),
+						getBlock( parentListId ),
 						{},
 						[]
 					);
 					nestedListId = nestedListBlock.clientId;
-					insertBlock(nestedListBlock, 0, firstClientId, false);
+					insertBlock( nestedListBlock, 0, firstClientId, false );
 					// Immediately update the block list settings, otherwise
 					// blocks can't be moved here due to canInsert checks.
 					updateBlockListSettings(
 						nestedListId,
-						getBlockListSettings(parentListId)
+						getBlockListSettings( parentListId )
 					);
 				}
 
@@ -93,15 +95,15 @@ export default function useOutdentListItem() {
 			moveBlocksToPosition(
 				clientIds,
 				parentListId,
-				getBlockRootClientId(parentListItemId),
-				getBlockIndex(parentListItemId) + 1
+				getBlockRootClientId( parentListItemId ),
+				getBlockIndex( parentListItemId ) + 1
 			);
-			if (!getBlockOrder(parentListId).length) {
+			if ( ! getBlockOrder( parentListId ).length ) {
 				const shouldSelectParent = false;
-				removeBlock(parentListId, shouldSelectParent);
+				removeBlock( parentListId, shouldSelectParent );
 			}
-		});
+		} );
 
 		return true;
-	}, []);
+	}, [] );
 }

@@ -4,16 +4,16 @@ import logoUrl from './assets/logo.png?url';
 import { EPUB_MIME_TYPE } from './epub';
 
 // Add manifest.json to the home screen
-const link = document.createElement('link');
+const link = document.createElement( 'link' );
 link.rel = 'manifest';
 const manifest = {
 	name: 'Blockdocs',
 	short_name: 'Blockdocs',
-	start_url: new URL('index.html', window.location).toString(),
+	start_url: new URL( 'index.html', window.location ).toString(),
 	display: 'standalone',
 	icons: [
 		{
-			src: new URL(logoUrl, window.location).toString(),
+			src: new URL( logoUrl, window.location ).toString(),
 			sizes: '512x512',
 			type: 'image/png',
 		},
@@ -22,14 +22,16 @@ const manifest = {
 	theme_color: '#000000',
 	file_handlers: [
 		{
-			action: new URL('index.html', window.location).toString(),
+			action: new URL( 'index.html', window.location ).toString(),
 			accept: {
-				[EPUB_MIME_TYPE]: ['.epub'],
+				[ EPUB_MIME_TYPE ]: [ '.epub' ],
 			},
 		},
 	],
 };
 
-const blob = new Blob([JSON.stringify(manifest)], { type: 'application/json' });
-link.href = URL.createObjectURL(blob);
-document.head.appendChild(link);
+const blob = new Blob( [ JSON.stringify( manifest ) ], {
+	type: 'application/json',
+} );
+link.href = URL.createObjectURL( blob );
+document.head.appendChild( link );

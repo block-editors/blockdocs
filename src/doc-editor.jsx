@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useMemo } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
 	privateApis,
 	PluginDocumentSettingPanel,
@@ -8,7 +8,11 @@ import { unlock } from './lock-unlock';
 import { useDispatch, useSelect } from '@wordpress/data';
 import { store as noticesStore } from '@wordpress/notices';
 import { setDefaultBlockName, serialize } from '@wordpress/blocks';
-import { store as blockEditorStore, __experimentalColorGradientControl as ColorPaletteControl } from '@wordpress/block-editor';
+import {
+	store as blockEditorStore,
+	// eslint-disable-next-line @wordpress/no-unsafe-wp-apis
+	__experimentalColorGradientControl as ColorPaletteControl,
+} from '@wordpress/block-editor';
 import { convertToDocx } from './docx';
 import {
 	Button,
@@ -20,7 +24,7 @@ import {
 } from '@wordpress/components';
 import { CommandMenu } from '@wordpress/commands';
 
-const { Editor, FullscreenMode } = unlock(privateApis);
+const { Editor, FullscreenMode } = unlock( privateApis );
 
 import './block-types/auto-generated.js';
 
@@ -55,103 +59,101 @@ const contentStyles = [
 import { EPUB_MIME_TYPE, coverCanvas } from './epub.js';
 import { downloadFile } from './file.js';
 
-setDefaultBlockName('core/paragraph');
+setDefaultBlockName( 'core/paragraph' );
 
 class BlobString extends String {
-	constructor(blob) {
-		const url = URL.createObjectURL(blob);
+	constructor( blob ) {
+		const url = URL.createObjectURL( blob );
 		const name =
 			blob.name ??
-			url.split('/').pop() + '.' + blob.type.split('/').pop();
-		super(`${url}#${name}`);
+			url.split( '/' ).pop() + '.' + blob.type.split( '/' ).pop();
+		super( `${ url }#${ name }` );
 	}
-	indexOf(searchString) {
+	indexOf( searchString ) {
 		// Bypass the blob: check
-		if (searchString === 'blob:') {
+		if ( searchString === 'blob:' ) {
 			return -1;
 		}
-		return super.indexOf(searchString);
+		return super.indexOf( searchString );
 	}
 }
 
-async function mediaUpload({ filesList, onFileChange }) {
+async function mediaUpload( { filesList, onFileChange } ) {
 	const urls = await Promise.all(
-		Array.from(filesList).map(async (file) => {
-			return new BlobString(file);
-		})
+		Array.from( filesList ).map( async ( file ) => {
+			return new BlobString( file );
+		} )
 	);
 	onFileChange(
-		urls.map((url) => ({
-			id: url.split('/').pop(),
+		urls.map( ( url ) => ( {
+			id: url.split( '/' ).pop(),
 			url,
-		}))
+		} ) )
 	);
 }
 
-function DocEditor({ canUseNativeFilesystem }) {
-	const { hasUndo, currentPostId } = useSelect((select) => {
+function DocEditor( { canUseNativeFilesystem } ) {
+	const { hasUndo, currentPostId } = useSelect( ( select ) => {
 		return {
-			currentPostId: select('core').getCurrentPostId(),
-			hasUndo: select('core').hasUndo(),
+			currentPostId: select( 'core' ).getCurrentPostId(),
+			hasUndo: select( 'core' ).hasUndo(),
 		};
-	});
-	const { setFile, saveEntityRecord } = useDispatch('core');
-	const { createWarningNotice } = useDispatch(noticesStore);
+	} );
+	const { setFile, saveEntityRecord } = useDispatch( 'core' );
+	const { createWarningNotice } = useDispatch( noticesStore );
 	async function onOpen() {
-		if (hasUndo) {
+		if ( hasUndo ) {
 			if (
 				// eslint-disable-next-line no-alert
 				window.confirm(
 					'You have unsaved changes. Do you want to save them?'
 				)
 			) {
-				await saveEntityRecord(null, null, currentPostId);
+				await saveEntityRecord( null, null, currentPostId );
 			}
 		}
-		if (window.showOpenFilePicker) {
-			const [fileHandle] = await window.showOpenFilePicker({
+		if ( window.showOpenFilePicker ) {
+			const [ fileHandle ] = await window.showOpenFilePicker( {
 				types: [
 					{
 						description: 'Pick a file to open.',
-						accept: { [EPUB_MIME_TYPE]: ['.epub'] },
+						accept: { [ EPUB_MIME_TYPE ]: [ '.epub' ] },
 					},
 				],
-			});
-			setFile(fileHandle);
+			} );
+			setFile( fileHandle );
 		} else {
-			const input = document.createElement('input');
+			const input = document.createElement( 'input' );
 			input.type = 'file';
 			input.accept = '.epub';
 			input.style.display = 'none';
-			input.addEventListener('change', async (event) => {
-				setFile(event.target.files[0]);
-			});
-			document.body.appendChild(input);
+			input.addEventListener( 'change', async ( event ) => {
+				setFile( event.target.files[ 0 ] );
+			} );
+			document.body.appendChild( input );
 			input.click();
-			document.body.removeChild(input);
+			document.body.removeChild( input );
 		}
 	}
-	useEffect(() => {
-		if (!canUseNativeFilesystem) {
+	useEffect( () => {
+		if ( ! canUseNativeFilesystem ) {
 			createWarningNotice(
 				'Limited support in this browser. Files will be downloaded instead of saved. Use Chrome to allow writing to the file system.'
 			);
 		}
 
-		if ('launchQueue' in window) {
-			window.launchQueue.setConsumer(async (launchParams) => {
-				if (!launchParams.files || launchParams.files.length === 0) {
+		if ( 'launchQueue' in window ) {
+			window.launchQueue.setConsumer( async ( launchParams ) => {
+				if ( ! launchParams.files || launchParams.files.length === 0 ) {
 					return;
 				}
-				for (const fileHandle of launchParams.files) {
-					setFile(fileHandle);
+				for ( const fileHandle of launchParams.files ) {
+					setFile( fileHandle );
 				}
-			});
-		} else {
-			console.log('File Handling API not supported in this browser.');
+			} );
 		}
-	}, []);
-	if (!currentPostId) {
+	}, [] );
+	if ( ! currentPostId ) {
 		return null;
 	}
 	return (
@@ -159,40 +161,40 @@ function DocEditor({ canUseNativeFilesystem }) {
 			<FullscreenMode isActive={ true } />
 			<CommandMenu />
 			<Editor
-				postId={currentPostId}
-				settings={{
+				postId={ currentPostId }
+				settings={ {
 					__unstableResolvedAssets: {
 						styles: contentStyles
-							.map((css) => `<style>${css}</style>`)
-							.join(''),
+							.map( ( css ) => `<style>${ css }</style>` )
+							.join( '' ),
 					},
 					disableCustomColors: false,
-				}}
+				} }
 				customSaveButton={
 					<>
 						<Button
 							size="compact"
-							variant={hasUndo ? 'secondary' : 'primary'}
-							onClick={onOpen}
+							variant={ hasUndo ? 'secondary' : 'primary' }
+							onClick={ onOpen }
 						>
 							Open
 						</Button>
 						<Button
 							size="compact"
-							variant={hasUndo ? 'primary' : 'secondary'}
+							variant={ hasUndo ? 'primary' : 'secondary' }
 							onClick={ () =>
-								saveEntityRecord(null, null, currentPostId)
+								saveEntityRecord( null, null, currentPostId )
 							}
-							disabled={!hasUndo}
+							disabled={ ! hasUndo }
 						>
-							{canUseNativeFilesystem ? 'Save' : 'Download'}
+							{ canUseNativeFilesystem ? 'Save' : 'Download' }
 						</Button>
 					</>
 				}
 			>
 				<MediaUpload />
 				<DocX />
-				<Title currentPostId={currentPostId} />
+				<Title currentPostId={ currentPostId } />
 			</Editor>
 		</>
 	);
@@ -200,22 +202,22 @@ function DocEditor({ canUseNativeFilesystem }) {
 
 function MediaUpload() {
 	const settings = useSelect(
-		(select) => select(blockEditorStore).getSettings().mediaUpload
+		( select ) => select( blockEditorStore ).getSettings().mediaUpload
 	);
-	const { updateSettings } = useDispatch(blockEditorStore);
-	useEffect(() => {
-		if (settings !== mediaUpload) {
-			updateSettings({ mediaUpload });
+	const { updateSettings } = useDispatch( blockEditorStore );
+	useEffect( () => {
+		if ( settings !== mediaUpload ) {
+			updateSettings( { mediaUpload } );
 		}
-	}, [settings]);
+	}, [ settings ] );
 	return null;
 }
 
 function DocX() {
-	const { getBlocks } = useSelect(blockEditorStore);
+	const { getBlocks } = useSelect( blockEditorStore );
 	async function onClick() {
-		const docx = await convertToDocx(serialize(getBlocks()));
-		downloadFile(docx, 'test.docx');
+		const docx = await convertToDocx( serialize( getBlocks() ) );
+		downloadFile( docx, 'test.docx' );
 	}
 	return (
 		<PluginDocumentSettingPanel name="blockdocs" title="Word File (.docx)">
@@ -226,56 +228,62 @@ function DocX() {
 	);
 }
 
-function CoverCanvas({ title, style, coverConfig }) {
-	const coverCanvasRef = useRef(null);
-	useEffect(() => {
-		coverCanvas({
+function CoverCanvas( { title, style, coverConfig } ) {
+	const coverCanvasRef = useRef( null );
+	useEffect( () => {
+		coverCanvas( {
 			canvas: coverCanvasRef.current,
 			title,
-			coverConfig
-		});
-	}, [title, coverConfig]);
+			coverConfig,
+		} );
+	}, [ title, coverConfig ] );
 	return <canvas style={ style } ref={ coverCanvasRef } />;
 }
 
-function Title({ currentPostId }) {
-	const { editEntityRecord } = useDispatch('core');
-	const {title, coverConfig} = useSelect(
-		(select) =>
-			select('core').getEditedEntityRecord(null, null, currentPostId),
-		[currentPostId]
+function Title( { currentPostId } ) {
+	const { editEntityRecord } = useDispatch( 'core' );
+	const { title, coverConfig } = useSelect(
+		( select ) =>
+			select( 'core' ).getEditedEntityRecord( null, null, currentPostId ),
+		[ currentPostId ]
 	);
-	const [fontURL, setFontURL] = useState('');
-	const [isCoverModalOpen, setIsCoverModalOpen] = useState(false);
-	function setTitle(title) {
-		editEntityRecord(null, null, currentPostId, { title });
+	const [ fontURL, setFontURL ] = useState( '' );
+	const [ isCoverModalOpen, setIsCoverModalOpen ] = useState( false );
+	function setTitle( _title ) {
+		editEntityRecord( null, null, currentPostId, { title: _title } );
 	}
-	function setCoverConfig(coverConfig) {
-		editEntityRecord(null, null, currentPostId, { coverConfig });
+	function setCoverConfig( _coverConfig ) {
+		editEntityRecord( null, null, currentPostId, {
+			coverConfig: _coverConfig,
+		} );
 	}
 	return (
 		<>
 			<PluginPostStatusInfo>
-				<TextControl label="Title" value={ title } onChange={ setTitle } />
+				<TextControl
+					label="Title"
+					value={ title }
+					onChange={ setTitle }
+				/>
 			</PluginPostStatusInfo>
 			<PluginPostStatusInfo>
 				<Button
 					variant="secondary"
-					onClick={() => setIsCoverModalOpen(true)}
+					onClick={ () => setIsCoverModalOpen( true ) }
 				>
 					Customize Cover
 				</Button>
-				{isCoverModalOpen && (
+				{ isCoverModalOpen && (
 					<CoverModal
-						title={title}
-						setTitle={setTitle}
-						fontURL={fontURL}
-						setFontURL={setFontURL}
-						onClose={() => setIsCoverModalOpen(false)}
-						coverConfig={coverConfig}
-						setCoverConfig={setCoverConfig}
+						title={ title }
+						setTitle={ setTitle }
+						fontURL={ fontURL }
+						setFontURL={ setFontURL }
+						onClose={ () => setIsCoverModalOpen( false ) }
+						coverConfig={ coverConfig }
+						setCoverConfig={ setCoverConfig }
 					/>
-				)}
+				) }
 			</PluginPostStatusInfo>
 			<PluginPostStatusInfo>
 				<CoverCanvas
@@ -288,29 +296,29 @@ function Title({ currentPostId }) {
 	);
 }
 
-function CoverModal({
+function CoverModal( {
 	title,
 	setTitle,
 	onClose,
 	coverConfig,
 	setCoverConfig,
-}) {
+} ) {
 	return (
 		<Modal
-			onRequestClose={onClose}
+			onRequestClose={ onClose }
 			size="fill"
 			title="Customize Cover"
 			className="blockdocs-cover-modal"
 		>
 			<div
-				style={{
+				style={ {
 					height: '100%',
 					display: 'flex',
 					gap: '10px',
 					flexDirection: 'row',
 				} }
 			>
-				<div style={{ flex: 1, height: '100%', overflow: 'auto' }}>
+				<div style={ { flex: 1, height: '100%', overflow: 'auto' } }>
 					<TextControl
 						label="Title"
 						value={ title }
@@ -318,56 +326,75 @@ function CoverModal({
 					/>
 					<TextControl
 						label="Font URL"
-						value={coverConfig.fontFamily}
-						onChange={(fontFamily) =>
-							setCoverConfig({fontFamily})
+						value={ coverConfig.fontFamily }
+						onChange={ ( fontFamily ) =>
+							setCoverConfig( { fontFamily } )
 						}
 					/>
-					<ColorPalette value={ coverConfig.color } onChange={ (color) => setCoverConfig({color}) } />
+					<ColorPalette
+						value={ coverConfig.color }
+						onChange={ ( color ) => setCoverConfig( { color } ) }
+					/>
 					<ColorPaletteControl
-						onColorChange={(color) => color && setCoverConfig({backgroundColor: color})}
-						onGradientChange={(gradient) => gradient && setCoverConfig({backgroundColor: gradient})}
-						gradientValue={coverConfig.backgroundColor}
-						colorValue={coverConfig.backgroundColor}
+						onColorChange={ ( color ) =>
+							color &&
+							setCoverConfig( { backgroundColor: color } )
+						}
+						onGradientChange={ ( gradient ) =>
+							gradient &&
+							setCoverConfig( { backgroundColor: gradient } )
+						}
+						gradientValue={ coverConfig.backgroundColor }
+						colorValue={ coverConfig.backgroundColor }
 					/>
 					<RangeControl
 						label="Font Size"
-						max={1000}
-						min={100}
-						value={coverConfig.fontSize}
-						onChange={(fontSize) =>
-							setCoverConfig({fontSize})
+						max={ 1000 }
+						min={ 100 }
+						value={ coverConfig.fontSize }
+						onChange={ ( fontSize ) =>
+							setCoverConfig( { fontSize } )
 						}
 					/>
 					<RangeControl
 						label="Padding Left"
-						max={100}
-						min={0}
-						value={coverConfig.paddingLeft}
-						onChange={(paddingLeft) => setCoverConfig({paddingLeft})}
+						max={ 100 }
+						min={ 0 }
+						value={ coverConfig.paddingLeft }
+						onChange={ ( paddingLeft ) =>
+							setCoverConfig( { paddingLeft } )
+						}
 					/>
 					<RangeControl
 						label="Padding Right"
-						max={100}
-						min={0}
-						value={coverConfig.paddingRight}
-						onChange={(paddingRight) => setCoverConfig({paddingRight})}
+						max={ 100 }
+						min={ 0 }
+						value={ coverConfig.paddingRight }
+						onChange={ ( paddingRight ) =>
+							setCoverConfig( { paddingRight } )
+						}
 					/>
 					<RangeControl
 						label="Vertical offset"
-						max={50}
-						min={-50}
-						value={coverConfig.verticalOffset}
-						onChange={(verticalOffset) => setCoverConfig({verticalOffset})}
+						max={ 50 }
+						min={ -50 }
+						value={ coverConfig.verticalOffset }
+						onChange={ ( verticalOffset ) =>
+							setCoverConfig( { verticalOffset } )
+						}
 					/>
 					<FormFileUpload
 						accept=".jpg"
-						onChange={(event) => setCoverConfig({custom: event.target.files[0]})}
+						onChange={ ( event ) =>
+							setCoverConfig( {
+								custom: event.target.files[ 0 ],
+							} )
+						}
 					>
 						Upload custom cover
 					</FormFileUpload>
 				</div>
-				<div style={{ flex: 1, height: '100%' }}>
+				<div style={ { flex: 1, height: '100%' } }>
 					<CoverCanvas
 						style={ {
 							border: '1px solid #000',
@@ -376,8 +403,8 @@ function CoverModal({
 							display: 'block',
 							margin: '0 auto',
 						} }
-						title={title}
-						coverConfig={coverConfig}
+						title={ title }
+						coverConfig={ coverConfig }
 					/>
 				</div>
 			</div>
@@ -385,11 +412,11 @@ function CoverModal({
 	);
 }
 
-export default ({ canUseNativeFilesystem }) => (
-	<DocEditor canUseNativeFilesystem={canUseNativeFilesystem} />
+export default ( { canUseNativeFilesystem } ) => (
+	<DocEditor canUseNativeFilesystem={ canUseNativeFilesystem } />
 );
 
-window.addEventListener('beforeunload', (event) => {
+window.addEventListener( 'beforeunload', ( event ) => {
 	event.preventDefault();
 	event.returnValue = '';
-});
+} );
