@@ -54,7 +54,6 @@ const contentStyles = [
 
 import { EPUB_MIME_TYPE, coverCanvas } from './epub.js';
 import { downloadFile } from './file.js';
-import { a } from 'framer-motion/client';
 
 setDefaultBlockName('core/paragraph');
 
@@ -389,3 +388,8 @@ function CoverModal({
 export default ({ canUseNativeFilesystem }) => (
 	<DocEditor canUseNativeFilesystem={canUseNativeFilesystem} />
 );
+
+window.addEventListener('beforeunload', (event) => {
+	event.preventDefault();
+	event.returnValue = '';
+});
