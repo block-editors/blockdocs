@@ -145,9 +145,7 @@ function DocEditor({ canUseNativeFilesystem }) {
 					return;
 				}
 				for (const fileHandle of launchParams.files) {
-					const file = await fileHandle.getFile();
-					console.log(`Opened file: ${file.name}`);
-					// You can now process or display the file in your app
+					setFile(fileHandle);
 				}
 			});
 		} else {
