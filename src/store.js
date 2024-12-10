@@ -48,11 +48,14 @@ async function extractImages(blocks) {
 				images.set(image.id, image);
 			}
 			if (name === 'core/image' && attributes.url) {
-				const relPath = attributes.url.split('#').pop();
-				images.set(
-					relPath,
-					await fetch(attributes.url).then((r) => r.blob())
-				);
+				let blob;
+				try {
+					blob = await fetch(attributes.url).then((r) => r.blob());
+				} catch (e) {
+					throw new Error('Could not load images, please add download them manually.');
+				}
+				const relPath = attributes.url.split('#').pop().split('/').pop();
+				images.set( relPath, blob );
 				return {
 					...block,
 					innerBlocks: newInnerBlocks,
@@ -258,12 +261,12 @@ const newStore = createReduxStore('core', {
 						],
 						options.isCached
 					);
-					// if (attributes.blocks) {
-					// 	const [blocks] = await extractImages(attributes.blocks);
-					// 	const local = serialize(blocks);
-					// 	window.localStorage.setItem(id, local);
-					// 	window.localStorage.setItem(id + '-time', Date.now());
-					// }
+					if (attributes.blocks) {
+						const [blocks] = await extractImages(attributes.blocks);
+						const local = serialize(blocks);
+						window.localStorage.setItem(id, local);
+						window.localStorage.setItem(id + '-time', Date.now());
+					}
 				}
 				await dispatch({
 					type: 'EDIT_ENTITY_RECORD',
@@ -355,7 +358,7 @@ const newStore = createReduxStore('core', {
 							id: 'save-notice',
 						});
 				} catch (e) {
-					window.console.error(e);
+					window.alert(e.message);
 				}
 			},
 		__unstableCreateUndoLevel:

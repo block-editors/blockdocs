@@ -138,6 +138,21 @@ function DocEditor({ canUseNativeFilesystem }) {
 				'Limited support in this browser. Files will be downloaded instead of saved. Use Chrome to allow writing to the file system.'
 			);
 		}
+
+		if ('launchQueue' in window) {
+			window.launchQueue.setConsumer(async (launchParams) => {
+				if (!launchParams.files || launchParams.files.length === 0) {
+					return;
+				}
+				for (const fileHandle of launchParams.files) {
+					const file = await fileHandle.getFile();
+					console.log(`Opened file: ${file.name}`);
+					// You can now process or display the file in your app
+				}
+			});
+		} else {
+			console.log('File Handling API not supported in this browser.');
+		}
 	}, []);
 	if (!currentPostId) {
 		return null;

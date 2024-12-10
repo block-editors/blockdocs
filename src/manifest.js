@@ -9,11 +9,11 @@ link.rel = 'manifest';
 const manifest = {
 	name: 'Blockdocs',
 	short_name: 'Blockdocs',
-	start_url: new URL('index.html', window.origin).toString(),
+	start_url: new URL('index.html', window.location).toString(),
 	display: 'standalone',
 	icons: [
 		{
-			src: new URL(logoUrl, window.origin).toString(),
+			src: new URL(logoUrl, window.location).toString(),
 			sizes: '512x512',
 			type: 'image/png',
 		},
@@ -22,7 +22,7 @@ const manifest = {
 	theme_color: '#000000',
 	file_handlers: [
 		{
-			action: '/',
+			action: new URL('index.html', window.location).toString(),
 			accept: {
 				[EPUB_MIME_TYPE]: ['.epub'],
 			},
