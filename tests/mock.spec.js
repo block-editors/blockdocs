@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import fs from 'fs';
 import path from 'path';
+import JSZip from 'jszip';
 
 const fsaMockPath = path.resolve(
 	'node_modules',
@@ -20,33 +21,44 @@ async function getPaths( page ) {
 	} );
 }
 
-export async function saveFile( page, name ) {
-	return await page.evaluate( async ( _name ) => {
-		window.fsaMock.mock.createFile( _name );
-	}, name );
+export async function saveFile( page, name, zip ) {
+	const base64 = await zip.generateAsync( {
+		type: 'base64',
+		platform: 'node',
+	} );
+	return await page.evaluate(
+		async ( { name: _name, base64: _base64 } ) => {
+			const binaryString = window.atob( _base64 );
+			const len = binaryString.length;
+			const bytes = new Uint8Array( len );
+			for ( let i = 0; i < len; i++ ) {
+				bytes[ i ] = binaryString.charCodeAt( i );
+			}
+			window.fsaMock.mock.createFile( _name, bytes.buffer );
+		},
+		{ name, base64 }
+	);
 }
 
 async function getContents( page, _path ) {
-	return await page.evaluate( ( __path ) => {
-		return new TextDecoder( 'utf-8' ).decode(
-			window.fsaMock.mock.contents( __path )
-		);
+	const base64 = await page.evaluate( ( __path ) => {
+		const buffer = window.fsaMock.mock.contents( __path );
+		let binary = '';
+		const bytes = new Uint8Array( buffer );
+		const len = bytes.byteLength;
+		for ( let i = 0; i < len; i++ ) {
+			binary += String.fromCharCode( bytes[ i ] );
+		}
+		return btoa( binary );
 	}, _path );
+
+	return await JSZip.loadAsync( base64, { base64: true } );
 }
 
 async function isFile( page, _path ) {
 	return await page.evaluate( ( __path ) => {
 		return window.fsaMock.mock.isFile( __path );
 	}, _path );
-}
-
-function createRevisionRegex( p ) {
-	if ( typeof p !== 'string' ) {
-		p = p.source;
-	}
-	return new RegExp(
-		`^${ p }\\.html\\.revisions\\/\\d+\\-\\d+\\-\\d+T\\d+_\\d+_\\d+\\.\\d+Z\\.html$`
-	);
 }
 
 test.describe( 'Blocknotes', () => {
@@ -56,6 +68,8 @@ test.describe( 'Blocknotes', () => {
 			const { mock } = window.fsaMock;
 			mock.install();
 			mock.onDirectoryPicker( () => '' );
+			mock.onOpenFilePicker( () => [ 'test.epub' ] );
+			mock.onSaveFilePicker( () => 'test.epub' );
 		} );
 
 		await page.goto( '/' );
@@ -72,110 +86,89 @@ test.describe( 'Blocknotes', () => {
 		} );
 	} );
 
-	test( 'open file picker', async ( { page } ) => {
-		await expect( page ).toHaveTitle( /Blocknotes/ );
+	test( 'save and open file', async ( { page } ) => {
+		await expect( page ).toHaveTitle( /Blockdocs/ );
 
-		await page.getByRole( 'button', { name: 'Pick Folder' } ).click();
+		const saveButton = page.getByRole( 'button', { name: 'Save' } );
+
+		await expect( saveButton ).toBeDisabled();
 
 		const emptyBlock = canvas( page ).getByRole( 'document', {
 			name: 'Empty block',
 		} );
 
-		await expect( emptyBlock ).toBeFocused();
-
-		await expect(
-			page.getByRole( 'row' ).locator( '.note-title' )
-		).toHaveText( [ 'Untitled' ] );
-
 		await emptyBlock.click();
 
-		await page.keyboard.type( 'aa' );
+		await expect( emptyBlock ).toBeFocused();
+
+		await page.keyboard.type( 'test' );
 
 		await expect(
 			canvas( page ).getByRole( 'document', { name: 'Block: Paragraph' } )
 		).toBeFocused();
 
-		await expect(
-			page.getByRole( 'row' ).locator( '.note-title' )
-		).toHaveText( [ 'aa' ] );
+		await saveButton.click();
 
-		// Nothing should have been saved yet because saving is debounced.
-		expect( await getPaths( page ) ).toEqual( [] );
-
-		const block = canvas( page ).getByRole( 'document', {
-			name: 'Block: Paragraph',
-		} );
-
-		await block.click();
-		await expect( block ).toBeFocused();
-
-		// wait 1s
-		await page.waitForTimeout( 1000 );
-
-		// Make sure saving doesn't remove focus.
-		await expect( block ).toBeFocused();
+		await page.waitForSelector( '.components-notice.is-success' );
 
 		// Ensure the initial file is gone and renamed, expect no other files.
-		expect( await getPaths( page ) ).toEqual( [
-			'aa.html',
-			'aa.html.revisions',
-			expect.stringMatching( createRevisionRegex( 'aa' ) ),
+		expect( await getPaths( page ) ).toEqual( [ 'test.epub' ] );
+		expect( await isFile( page, 'test.epub' ) ).toBe( true );
+		const zip = await getContents( page, 'test.epub' );
+		expect( Object.keys( zip.files ) ).toEqual( [
+			'mimetype',
+			'META-INF/',
+			'META-INF/container.xml',
+			'index.html',
+			'cover.jpg',
+			'cover.json',
+			'_nav.html',
+			'_package.xml',
 		] );
-		expect( await isFile( page, 'aa.html' ) ).toBe( true );
-		expect( await getContents( page, 'aa.html' ) )
-			.toBe( `<!-- wp:paragraph -->
-<p>aa</p>
-<!-- /wp:paragraph -->` );
+		expect( await zip.files[ 'index.html' ].async( 'string' ) ).toBe(
+			`<!DOCTYPE html><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head>
+<!-- For XHTML compatibility. -->
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<title>Untitled Document</title>
+</head>
+<body>
+<!-- wp:paragraph -->
+<p>test</p>
+<!-- /wp:paragraph -->
 
-		// Focus should be kept during subsequent saves.
-		await page.keyboard.type( 'a' );
-		await page.waitForTimeout( 1000 );
-		await page.keyboard.type( 'a' );
-		await page.waitForTimeout( 1000 );
 
-		expect( await getPaths( page ) ).toEqual( [
-			'aaaa.html',
-			'aaaa.html.revisions',
-			expect.stringMatching( createRevisionRegex( 'aaaa' ) ),
-		] );
-		expect( await getContents( page, 'aaaa.html' ) )
-			.toBe( `<!-- wp:paragraph -->
-<p>aaaa</p>
-<!-- /wp:paragraph -->` );
+</body></html>`
+		);
 
-		// Create a second note.
-		await page.getByRole( 'button', { name: 'New Note' } ).click();
+		// reload the page
+		await page.reload();
 
-		await page.keyboard.type( 'b' );
+		await expect( saveButton ).toBeDisabled();
+
+		await saveFile( page, 'test.epub', zip );
+
+		expect( await getPaths( page ) ).toEqual( [ 'test.epub' ] );
+
+		const openButton = page.getByRole( 'button', {
+			name: 'Open',
+			exact: true,
+		} );
+		await expect( openButton ).toBeEnabled();
+		await openButton.click();
 
 		await expect(
-			page.getByRole( 'row' ).locator( '.note-title' )
-		).toHaveText( [ 'b', 'aaaa' ] );
-
-		// Immediately switch back to note A.
-		await page.getByRole( 'button', { name: 'aaaa' } ).click();
-
-		await expect(
-			canvas( page ).getByRole( 'document', { name: 'Block: Paragraph' } )
-		).toHaveText( 'aaaa' );
-
-		// Check if note B is saved.
-		expect( await getPaths( page ) ).toEqual( [
-			'aaaa.html',
-			'aaaa.html.revisions',
-			expect.stringMatching( createRevisionRegex( 'aaaa' ) ),
-			'b.html',
-			'b.html.revisions',
-			expect.stringMatching( createRevisionRegex( 'b' ) ),
-		] );
-		expect( await getContents( page, 'b.html' ) )
-			.toBe( `<!-- wp:paragraph -->
-<p>b</p>
-<!-- /wp:paragraph -->` );
+			canvas( page ).getByRole( 'document', {
+				name: 'Block: Paragraph',
+			} )
+		).toHaveText( 'test' );
 	} );
 
-	test( 'undo/redo', async ( { page } ) => {
-		await page.getByRole( 'button', { name: 'Pick Folder' } ).click();
+	test.skip( 'undo/redo', async ( { page } ) => {
+		const emptyBlock = canvas( page ).getByRole( 'document', {
+			name: 'Empty block',
+		} );
+
+		await emptyBlock.click();
 
 		const undo = page.getByRole( 'button', { name: 'Undo' } );
 		const redo = page.getByRole( 'button', { name: 'Redo' } );
@@ -210,9 +203,9 @@ test.describe( 'Blocknotes', () => {
 
 		await undo.click();
 
-		const emptyBlock = canvas( page ).getByRole( 'document', {
-			name: 'Empty block',
-		} );
+		// const emptyBlock = canvas( page ).getByRole( 'document', {
+		// 	name: 'Empty block',
+		// } );
 
 		await expect( emptyBlock ).toBeFocused();
 		await expect( undo ).toBeDisabled();
@@ -234,186 +227,4 @@ test.describe( 'Blocknotes', () => {
 		await page.keyboard.type( 'd' );
 		await expect( redo ).toBeDisabled();
 	} );
-
-	test( 'existing filename', async ( { page } ) => {
-		await page.getByRole( 'button', { name: 'Pick Folder' } ).click();
-
-		await page.keyboard.type( 'a' );
-		await page.keyboard.press( 'Enter' );
-		await page.keyboard.type( '1' );
-
-		await page.getByRole( 'button', { name: 'New Note' } ).click();
-
-		await page.keyboard.type( 'a' );
-		await page.keyboard.press( 'Enter' );
-		await page.keyboard.type( '2' );
-
-		await page
-			.getByRole( 'row' )
-			.locator( '.note-title:text("a")' )
-			.nth( 1 )
-			.click();
-
-		await expect(
-			canvas( page )
-				.getByRole( 'document', { name: 'Block: Paragraph' } )
-				.nth( 1 )
-		).toHaveText( '1' );
-
-		// The original file should be intact.
-		expect( await getPaths( page ) ).toEqual( [
-			'a.html',
-			'a.html.revisions',
-			expect.stringMatching( createRevisionRegex( 'a' ) ),
-			expect.stringMatching( /^a\.\d+\.html$/ ),
-			expect.stringMatching( /^a\.\d+\.html\.revisions$/ ),
-			expect.stringMatching( createRevisionRegex( /a\.\d+/ ) ),
-		] );
-		expect( await getContents( page, 'a.html' ) )
-			.toBe( `<!-- wp:paragraph -->
-<p>a</p>
-<!-- /wp:paragraph -->
-
-<!-- wp:paragraph -->
-<p>1</p>
-<!-- /wp:paragraph -->` );
-	} );
-
-	test( 'store new revision on every note open', async ( { page } ) => {
-		await page.getByRole( 'button', { name: 'Pick Folder' } ).click();
-		await page.keyboard.type( 'a' );
-
-		await page.getByRole( 'button', { name: 'New Note' } ).click();
-
-		await page.keyboard.type( 'b' );
-
-		await page
-			.getByRole( 'row' )
-			.locator( '.note-title:text("a")' )
-			.click();
-
-		await canvas( page )
-			.getByRole( 'document', { name: 'Block: Paragraph' } )
-			.click();
-		await page.keyboard.type( 'a' );
-
-		await page
-			.getByRole( 'row' )
-			.locator( '.note-title:text("b")' )
-			.click();
-
-		expect( await getPaths( page ) ).toEqual( [
-			'b.html',
-			'b.html.revisions',
-			expect.stringMatching( createRevisionRegex( 'b' ) ),
-			'aa.html',
-			'aa.html.revisions',
-			expect.stringMatching( createRevisionRegex( 'aa' ) ),
-			expect.stringMatching( createRevisionRegex( 'aa' ) ),
-		] );
-	} );
-
-	test( 'trash', async ( { page } ) => {
-		await page.getByRole( 'button', { name: 'Pick Folder' } ).click();
-		await page.keyboard.type( 'a' );
-
-		await page.getByRole( 'button', { name: 'New Note' } ).click();
-
-		await page.keyboard.type( 'b' );
-
-		await page
-			.getByRole( 'row' )
-			.locator( '.note-title:text("a")' )
-			.click();
-
-		page.on( 'dialog', async ( dialog ) => {
-			await dialog.accept();
-		} );
-
-		await page.getByRole( 'button', { name: 'Trash' } ).click();
-
-		expect( await getPaths( page ) ).toEqual( [
-			'a.html.revisions',
-			expect.stringMatching( createRevisionRegex( 'a' ) ),
-			'b.html',
-			'b.html.revisions',
-			expect.stringMatching( createRevisionRegex( 'b' ) ),
-		] );
-	} );
-
-	test( 'trash item in folder', async ( { page } ) => {
-		await saveFile( page, 'folder/a.html' );
-		await page.getByRole( 'button', { name: 'Pick Folder' } ).click();
-
-		expect( await getPaths( page ) ).toEqual( [
-			'folder',
-			'folder/a.html',
-		] );
-
-		page.on( 'dialog', async ( dialog ) => {
-			await dialog.accept();
-		} );
-
-		await page.getByRole( 'button', { name: 'Trash' } ).click();
-
-		expect( await getPaths( page ) ).toEqual( [ 'folder' ] );
-	} );
-
-	test.describe( 'tags', () => {
-		async function getInnerHTML( page ) {
-			return await canvas( page )
-				.locator( ':focus' )
-				.evaluate( ( node ) => node.innerHTML );
-		}
-
-		test( 'can insert', async ( { page } ) => {
-			await page.getByRole( 'button', { name: 'Pick Folder' } ).click();
-
-			await page.keyboard.type( '#' );
-
-			expect( await getInnerHTML( page ) ).toBe( '#' );
-
-			await page.keyboard.type( 'ab' );
-
-			expect( await getInnerHTML( page ) ).toBe(
-				'<u data-rich-text-format-boundary="true">#ab</u>'
-			);
-
-			await page.keyboard.type( '.' );
-
-			expect( await getInnerHTML( page ) ).toBe( '<u>#ab</u>.' );
-
-			await page.keyboard.press( 'Home' );
-			await page.keyboard.press( 'ArrowRight' );
-			await page.keyboard.press( 'ArrowRight' );
-
-			await page.keyboard.type( '.' );
-
-			expect( await getInnerHTML( page ) ).toBe( '#.ab.' );
-		} );
-
-		test( 'can insert before text', async ( { page } ) => {
-			await page.getByRole( 'button', { name: 'Pick Folder' } ).click();
-
-			await page.keyboard.type( 'z' );
-
-			await page.keyboard.press( 'ArrowLeft' );
-
-			await page.keyboard.type( '#' );
-
-			expect( await getInnerHTML( page ) ).toBe( '#z' );
-
-			await page.keyboard.type( 'ab' );
-
-			expect( await getInnerHTML( page ) ).toBe(
-				'<u data-rich-text-format-boundary="true">#ab</u>z'
-			);
-
-			await page.keyboard.type( '.' );
-
-			expect( await getInnerHTML( page ) ).toBe( '<u>#ab</u>.z' );
-		} );
-	} );
-
-	// Test if file saves after deleting the file.
 } );

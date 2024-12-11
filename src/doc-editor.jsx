@@ -3,6 +3,8 @@ import {
 	privateApis,
 	PluginDocumentSettingPanel,
 	PluginPostStatusInfo,
+	EditorKeyboardShortcuts,
+	EditorKeyboardShortcutsRegister,
 } from '@wordpress/editor';
 import { unlock } from './lock-unlock';
 import { useDispatch, useSelect } from '@wordpress/data';
@@ -195,6 +197,8 @@ function DocEditor( { canUseNativeFilesystem } ) {
 				<MediaUpload />
 				<DocX />
 				<Title currentPostId={ currentPostId } />
+				<EditorKeyboardShortcuts />
+				<EditorKeyboardShortcutsRegister />
 			</Editor>
 		</>
 	);
@@ -221,8 +225,9 @@ function DocX() {
 	}
 	return (
 		<PluginDocumentSettingPanel name="blockdocs" title="Word File (.docx)">
+			<p>Please note that not all blocks will be converted yet.</p>
 			<Button variant="primary" onClick={ onClick }>
-				Download
+				Download (Beta)
 			</Button>
 		</PluginDocumentSettingPanel>
 	);
@@ -325,7 +330,7 @@ function CoverModal( {
 						onChange={ setTitle }
 					/>
 					<TextControl
-						label="Font URL"
+						label="Google Font URL"
 						value={ coverConfig.fontFamily }
 						onChange={ ( fontFamily ) =>
 							setCoverConfig( { fontFamily } )
